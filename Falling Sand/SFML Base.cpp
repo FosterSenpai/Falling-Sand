@@ -331,7 +331,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     continue;
                 }
                 // -- Check diagonals down (Randomly) --
-                int direction = (rand() % 2 == 0) ? -1 : 1; // -1 = left, 1 = right
+                int direction = (rand() % 100 < 50) ? -1 : 1; // -1 = left, 1 = right
                 // Check first diagonal ( left or right random )
                 int diagCol1 = col + direction;
                 if (row + 1 < rows && diagCol1 >= 0 && diagCol1 < cols && grid[row + 1][diagCol1].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol1].type == ParticleType::EMPTY) {
@@ -367,6 +367,30 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         nextGrid[row][col] = {};
                         continue;
                     }
+
+                    // --- Check WIDER horizontal (ONLY if immediate failed) ---
+                    // TODO: Make movement only skip over other water particles so no jumping through walls.
+                    // Check two cells over in random direction
+                    int sideCol1_far = col + 2 * direction;
+                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type != ParticleType::EMPTY) && // Check if immediate is blocked or OOB
+                        (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
+                    {
+                        nextGrid[row][sideCol1_far] = grid[row][col]; // Move 2 steps
+                        nextGrid[row][col] = {};
+                        continue; // Moved 2 steps
+                    }
+
+                    // Check two cells over in other direction
+                    int sideCol2_far = col - 2 * direction;
+                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type != ParticleType::EMPTY) &&
+                        (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
+                    {
+                        nextGrid[row][sideCol2_far] = grid[row][col];
+                        nextGrid[row][col] = {};
+                        continue;
+                    }
                 }
             }
             else if (grid[row][col].type == ParticleType::OIL) { // -- Oil Logic --
@@ -377,7 +401,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     continue;
                 }
                 // -- Check diagonals down (Randomly) --
-                int direction = (rand() % 2 == 0) ? -1 : 1; // -1 = left, 1 = right
+                int direction = (rand() % 100 < 50) ? -1 : 1; // -1 = left, 1 = right
                 // Check first diagonal ( left or right random )
                 int diagCol1 = col + direction;
                 if (row + 1 < rows && diagCol1 >= 0 && diagCol1 < cols && grid[row + 1][diagCol1].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol1].type == ParticleType::EMPTY) {
@@ -415,30 +439,6 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         nextGrid[row][col] = {};
                         continue;
                     }
-
-                    // --- Check WIDER horizontal (ONLY if immediate failed) ---
-                    // Check two cells over in random direction
-                    int sideCol1_far = col + 2 * direction;
-                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type != ParticleType::EMPTY) && // Check if immediate is blocked or OOB
-                        (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
-                    {
-                        nextGrid[row][sideCol1_far] = grid[row][col]; // Move 2 steps
-                        nextGrid[row][col] = {};
-                        continue; // Moved 2 steps
-                    }
-
-                    // Check two cells over in other direction
-                    int sideCol2_far = col - 2 * direction;
-                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type != ParticleType::EMPTY) &&
-                        (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
-                    {
-                        nextGrid[row][sideCol2_far] = grid[row][col];
-                        nextGrid[row][col] = {};
-                        continue;
-                    }
-                    // TODO: ADD furthure horizontal movement for water check 3 & 4 maybe 5 blocks
                 }
             }
             else if (grid[row][col].type == ParticleType::SILT) { // -- Silt Logic --
