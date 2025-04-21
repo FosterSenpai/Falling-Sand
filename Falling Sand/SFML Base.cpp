@@ -1,13 +1,15 @@
 /*
 TODO:
-
+==========================================================================================
 make ui for changing sand type, make other materials (clickable buttons or something)
     make interactions for different materials
-
+==========================================================================================
 Particle spawners? 
-
+==========================================================================================
 if grass been around long enough and above still empty grow flower/vine
-
+==========================================================================================
+Add menu on 'esc' with instructions/settings
+==========================================================================================
 Break up to follow OOP
 
     world class
@@ -58,8 +60,7 @@ Break up to follow OOP
 
     Utils class
         get color for particle helper func
-
-
+==========================================================================================
 */
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -72,6 +73,8 @@ enum class ParticleType {
     SAND,
     DIRT,
     GRASS,
+    WATER,
+    SILT,
 };
 
 struct Particle{
@@ -191,14 +194,20 @@ int main()
                         std::cout << brushSize;
                     }
                 }
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num0) { // Change to Empty (Erase)
+                    brushType = ParticleType::EMPTY;
+                }
                 if (keyPressed->scancode == sf::Keyboard::Scan::Num1) { // Change to Sand
                     brushType = ParticleType::SAND;
                 }
                 if (keyPressed->scancode == sf::Keyboard::Scan::Num2) { // Change to Dirt
                     brushType = ParticleType::DIRT;
                 } 
-                if (keyPressed->scancode == sf::Keyboard::Scan::Num0) { // Change to Empty (Erase)
-                    brushType = ParticleType::EMPTY;
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num3) { // Change to Water
+                    brushType = ParticleType::WATER;
+                }
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num4) { // Change to Silt
+                    brushType = ParticleType::SILT;
                 }
             }
 
@@ -241,9 +250,9 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
 
                     if (belowType == ParticleType::EMPTY) { // If empty below:
                         // -- Fall Down --
-                        nextGrid[row + 1][col] = grid[row][col]; // Copy particle data to new spot
-                        nextGrid[row][col] = Particle{};         // Reset old spot to default (EMPTY)
-                        continue; // Sand moved
+                        nextGrid[row + 1][col] = grid[row][col]; // Copy data from current spot, into where its moving
+                        nextGrid[row][col] = Particle{};         // Reset old spot
+                        continue;                                // Sand moved
                     }
                     else { // If below filled:
                         // -- Fall Diagonally --
@@ -287,6 +296,8 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                             canGrowGrass = true;
                         }
                     }
+
+                    // TODO: make dirt blocks have small chance to fall from bottom of dirt structure for a few seconds then stay static
                 }
 
                 if (canGrowGrass) {
@@ -307,6 +318,64 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     //TODO: if above empty grow vine
                 }
 
+            }
+            else if (grid[row][col].type == ParticleType::WATER) { // -- Water Logic --
+                if (row + 1 < rows) { // In bounds
+                    //move down
+                    if (grid[row + 1][col].type == ParticleType::EMPTY) {
+                        nextGrid[row + 1][col] = grid[row][col];
+                        nextGrid[row][col] = Particle{};
+                        continue;
+                    }
+                    else { // If below filled
+                        // -- Fall Diagonally --
+                        int direction = (rand() % 2 == 0) ? -1 : 1; // Get random direction to move in
+                        // Check if valid cell
+                        int check_col_left = col - direction;
+                        int check_col_right = col + direction;
+                        bool canCheckLeft = (check_col_left >= 0 && check_col_left < cols);
+                        bool canCheckRight = (check_col_right >= 0 && check_col_right < cols);
+
+                        ParticleType below_left_type = ParticleType::SAND; // Assume blocked
+                        if (canCheckLeft) { below_left_type = grid[row + 1][check_col_left].type; } // Get actual state
+
+                        ParticleType below_right_type = ParticleType::SAND; // Assume blocked
+                        if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; } // Get actual state
+
+                        if (canCheckLeft && below_left_type == ParticleType::EMPTY) { // Fall diagonally left
+                            nextGrid[row + 1][check_col_left] = grid[row][col];
+                            nextGrid[row][col] = {};
+                            continue;
+                        }
+                        else if (canCheckRight && below_right_type == ParticleType::EMPTY) { // Fall diagonally right
+                            nextGrid[row + 1][check_col_right] = grid[row][col];
+                            nextGrid[row][col] = {};
+                            continue;
+                        }
+                        // If this hits, both bottom diagonals are full, move sideways
+                        else if (canCheckLeft && grid[row][col + 1].type == ParticleType::EMPTY) { 
+                            nextGrid[row][col + 1] = grid[row][col];
+                            nextGrid[row][col] = {};
+                            continue;
+                        }
+                        else if (canCheckRight && grid[row][col - 1].type == ParticleType::EMPTY) {
+                            nextGrid[row][col - 1] = grid[row][col];
+                            nextGrid[row][col] = {};
+                            continue;
+                        }
+                    }
+                }
+            }
+            else if (grid[row][col].type == ParticleType::SILT) { // -- Silt Logic --
+                if (row + 1 < rows) { // In bounds
+                    
+                    // Only fall downward, no sideways
+                    if (grid[row + 1][col].type == ParticleType::EMPTY) {
+                        nextGrid[row + 1][col] = grid[row][col];
+                        nextGrid[row][col] = Particle{};
+                        continue;
+                    }
+                }
             }
         }
     }
@@ -374,10 +443,13 @@ void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf:
 
 sf::Color getColorForType(ParticleType type)
 {
+    // TODO: Make a random variation in brightness of color 
     switch (type) {
     case ParticleType::SAND:  return sf::Color(194, 178, 128);
     case ParticleType::DIRT:  return sf::Color(133, 94, 66);
     case ParticleType::GRASS: return sf::Color(40, 140, 40);
+    case ParticleType::WATER: return sf::Color(60, 120, 180);
+    case ParticleType::SILT:  return sf::Color(115, 105, 90);
 
     case ParticleType::EMPTY: return sf::Color::White;
     default:                  return sf::Color::Black; // Unknown particles are black
@@ -392,6 +464,8 @@ void updateUI(sf::Text& text, ParticleType brushType, int brushSize)
         case ParticleType::SAND:  brushTypeName = "Sand"; break;
         case ParticleType::DIRT:  brushTypeName = "Dirt"; break;
         case ParticleType::GRASS: brushTypeName = "Grass"; break;
+        case ParticleType::WATER: brushTypeName = "Water"; break;
+        case ParticleType::SILT:  brushTypeName = "Silt"; break;
         case ParticleType::EMPTY: brushTypeName = "Empty"; break;
         default:                  brushTypeName = "Unknown"; break;
     }
