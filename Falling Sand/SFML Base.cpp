@@ -1,3 +1,12 @@
+/*
+TODO:
+Create sand struct with own color variable to be drawn with
+
+implement change color on scroll
+
+make ui for changing sand type, make other materials
+    make interactions for different materials
+*/
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <iostream>
@@ -20,7 +29,7 @@ void updateGrid(std::vector<std::vector<int>>& grid, std::vector<std::vector<int
  * @param cols : The number of cols.
  * @param cellWidth : The width of each cell in the grid.
  */
-void prepareSand(const std::vector<std::vector<int>>& grid, std::vector<sf::RectangleShape>& cells, int rows, int cols, float cellWidth, sf::Color color);
+void prepareVertices(const std::vector<std::vector<int>>& grid, sf::VertexArray& vertices, int rows, int cols, float cellWidth, sf::Color color);
 /**
  * @brief Function that handles spawning sand on mouse click.
  * @param grid : The main grid.
@@ -34,7 +43,7 @@ void mousePressed(std::vector<std::vector<int>>& grid, float cellWidth, sf::Rend
 // --- Variables ---
 unsigned int res_x = 1280.0f;
 unsigned int res_y = 720.0f;
-float cellWidth = 5.0f;
+float cellWidth = 1.0f;
 int cols = static_cast<int>(res_x / cellWidth);
 int rows = static_cast<int>(res_y / cellWidth);
 
@@ -48,9 +57,9 @@ sf::Color sandColor = sf::Color(194, 178, 128);
 int main()
 {
     sf::RenderWindow window(sf::VideoMode({ res_x, res_y }), "Falling Sand :");
-    window.setFramerateLimit(60);
+    window.setVerticalSyncEnabled(true);
 
-    std::vector<sf::RectangleShape> cells; // Vector to hold all cells
+    sf::VertexArray gridVertices(sf::PrimitiveType::Triangles);
 
     sf::Clock clock;
     float lastTime = 0;
@@ -80,15 +89,13 @@ int main()
 
         // --- UPDATE ---
         updateGrid(grid, nextGrid, rows, cols);
-        prepareSand(grid, cells, rows, cols, cellWidth, sandColor);
+        prepareVertices(grid, gridVertices, rows, cols, cellWidth, sandColor);
 
 
         // --- DRAW ---
-        window.clear();
+        window.clear(sf::Color(255,255,255));
 
-        for (const auto& cell : cells) { // Draw cells
-            window.draw(cell);
-        }
+        window.draw(gridVertices);
 
         window.display();
     }
@@ -157,35 +164,82 @@ void updateGrid(std::vector<std::vector<int>>& grid, std::vector<std::vector<int
     // Final state of grid
     grid = nextGrid;
 }
-void prepareSand(const std::vector<std::vector<int>>& grid, std::vector<sf::RectangleShape>& cells, int rows, int cols, float cellWidth, sf::Color color)
+void prepareVertices(const std::vector<std::vector<int>>& grid, sf::VertexArray& vertices, int rows, int cols, float cellWidth, sf::Color color)
 {
-    cells.clear(); // Clear prev frames shapes
+    vertices.clear(); // Clear prev frames shapes
+    // Set primitive type just in case (good practice)
+    vertices.setPrimitiveType(sf::PrimitiveType::Triangles);
 
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
 
-            sf::RectangleShape cell({ static_cast<float>(cellWidth), static_cast<float>(cellWidth) });
-            cell.setPosition({ static_cast<float>(col * cellWidth), static_cast<float>(row * cellWidth) });
+            // Only draw sand
+            if (grid[row][col] == 1) {
+                // Calculate corner coordinates
+                float left = static_cast<float>(col) * cellWidth;
+                float top = static_cast<float>(row) * cellWidth;
+                float right = left + cellWidth;
+                float bottom = top + cellWidth;
+                // Define corner vecs
+                sf::Vector2f topLeft(left, top);
+                sf::Vector2f topRight(right, top);
+                sf::Vector2f bottomLeft(left, bottom);
+                sf::Vector2f bottomRight(right, bottom);
 
-            // Color check on state
-            if (grid[row][col] == 1) { //Sand
-                cell.setFillColor(color);
+                // Create vertices for 2 tris
+                // - Tri 1 -
+                vertices.append(sf::Vertex(topLeft, color));
+                vertices.append(sf::Vertex(topRight, color));
+                vertices.append(sf::Vertex(bottomRight, color));
+                // - Tri 2 -
+                vertices.append(sf::Vertex(topLeft, color));
+                vertices.append(sf::Vertex(bottomRight, color));
+                vertices.append(sf::Vertex(bottomLeft, color));
             }
-            else {
-                cell.setFillColor(sf::Color(255, 255, 255));
-            }
-            cells.push_back(cell);
+            //else {
+            //    // Calculate corner coordinates
+            //    float left = static_cast<float>(col) * cellWidth;
+            //    float top = static_cast<float>(row) * cellWidth;
+            //    float right = left + cellWidth;
+            //    float bottom = top + cellWidth;
+            //    // Define corner vecs
+            //    sf::Vector2f topLeft(left, top);
+            //    sf::Vector2f topRight(right, top);
+            //    sf::Vector2f bottomLeft(left, bottom);
+            //    sf::Vector2f bottomRight(right, bottom);
+
+            //    // Create vertices for 2 tris
+            //    // - Tri 1 -
+            //    vertices.append(sf::Vertex(topLeft, sf::Color(255,255,255)));
+            //    vertices.append(sf::Vertex(topRight, sf::Color(255, 255, 255)));
+            //    vertices.append(sf::Vertex(bottomRight, sf::Color(255, 255, 255)));
+            //    // - Tri 2 -
+            //    vertices.append(sf::Vertex(topLeft, sf::Color(255, 255, 255)));
+            //    vertices.append(sf::Vertex(bottomRight, sf::Color(255, 255, 255)));
+            //    vertices.append(sf::Vertex(bottomLeft, sf::Color(255, 255, 255)));
+            //}
         }
     }
 }
 void mousePressed(std::vector<std::vector<int>>& grid, float cellWidth, sf::RenderWindow& window, int rows, int cols)
 {
-    int col = static_cast<int>(std::floor(sf::Mouse::getPosition(window).x / cellWidth));
-    int row = static_cast<int>(std::floor(sf::Mouse::getPosition(window).y / cellWidth));
+    int mouseCol = static_cast<int>(std::floor(sf::Mouse::getPosition(window).x / cellWidth));
+    int mouseRow = static_cast<int>(std::floor(sf::Mouse::getPosition(window).y / cellWidth));
 
-    if (row >= 0 && row < rows && col >= 0 && col < cols) { // if within bounds
-        if (grid[row][col] == 0) {
-            grid[row][col] = 1;
+    int brushRadius = 5;
+    int extent = std::floor(brushRadius /2);
+
+    for (int i = -extent; i <= extent; i++) {
+        for (int j = -extent; j <= extent; j++) {
+            if (rand() % 100 < 54) {
+                int col = mouseCol + i;
+                int row = mouseRow + j;
+                if (row >= 0 && row < rows && col >= 0 && col < cols) { // if within bounds
+                    if (grid[row][col] == 0) {
+                        grid[row][col] = 1;
+                    }
+                }
+            }
         }
     }
 }
