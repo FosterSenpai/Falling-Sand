@@ -8,6 +8,58 @@ Particle spawners?
 
 if grass been around long enough and above still empty grow flower/vine
 
+Break up to follow OOP
+
+    world class
+        init grids
+        handles grid update
+        set + get particle types of cells
+
+    Game class
+        Setup window + variables
+        setup clock + variables
+        hold cellWidth
+        setup brush UI
+        setup brush settings
+        handle event processing
+            key press
+            realtime input (mouse click)
+        handle placing particles function to be called on click
+        handle update of brushUI
+        Prepare vetices (same as before)
+
+        render func
+            // Prepare vertices based on the current world state
+            prepareVerticesInternal(); // Helper to keep render clean
+
+            window.clear(sf::Color::White);
+            window.draw(gridVertices);
+            window.draw(uiText);
+            window.display();
+
+        run func that is main loop
+            void run() {
+             srand(static_cast<unsigned int>(time(0))); // Seed random
+             float lastTimeForFPS = 0.f; // For FPS calculation only
+
+            while (window.isOpen()) {
+                 // --- FPS Calculation --- (Can be simplified if not needed)
+                float currentTime = clock.getElapsedTime().asSeconds();
+                float deltaTime = currentTime - lastTimeForFPS;
+                lastTimeForFPS = currentTime;
+                float fps = (deltaTime > 0) ? (1.f / deltaTime) : 0.f;
+                // -----------------------
+
+                processEvents();         // Handle window events, key presses
+                handleRealtimeInput();   // Handle mouse hold
+                update();                // Update simulation and UI text
+                render();                // Draw everything
+            }
+
+    Utils class
+        get color for particle helper func
+
+
 */
 #include <SFML/Graphics.hpp>
 #include <vector>
