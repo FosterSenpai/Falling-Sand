@@ -1,16 +1,13 @@
 /*
 TODO:
-implement change color on scroll
 
-make ui for changing sand type, make other materials
+make ui for changing sand type, make other materials (clickable buttons or something)
     make interactions for different materials
 
 Particle spawners? 
 
-add grass to dirt
-    if above block empty, wait a bit then rand chance if block will turn to grass
-        constant check on above block, when filled, wait a bit then rand chance to turn back to dirt.
-        if grass black been around long enough and above still empty grow flower/vine
+if grass been around long enough and above still empty grow flower/vine
+
 */
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -23,11 +20,10 @@ enum class ParticleType {
     SAND,
     DIRT,
     GRASS,
-    // TODO: add more
-    // bool hasMoved = false; could use something like this to optimize update to only check moved or something.
 };
 
 struct Particle{
+    // -- Particle Data --
     ParticleType type = ParticleType::EMPTY; // Default to empty, color tied to type
 };
 
@@ -58,7 +54,18 @@ void prepareVertices(const std::vector<std::vector<Particle>>& grid, sf::VertexA
  * @param cols : The number of cols.
  */
 void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf::RenderWindow& window, int rows, int cols, ParticleType brushType, int brushSize);
+/**
+ * @brief Get corresponding color from particle enum
+ * @param type The type of particle
+ * @return The corresponding sf::Color to the particle
+ */
 sf::Color getColorForType(ParticleType type);
+/**
+ * @brief Update the brush text UI
+ * @param text The UI text
+ * @param brushType The current brush type
+ * @param brushSize The current brush size
+ */
 void updateUI(sf::Text& text, ParticleType brushType, int brushSize);
 
 // --- Variables ---
@@ -69,24 +76,20 @@ int cols = static_cast<int>(res_x / cellWidth);
 int rows = static_cast<int>(res_y / cellWidth);
 
 // - Grids -
-// A grid spans the entire screen and holds the coords for the sand, a vector of vectors
-// each element either 1 (sand) or 0 (empty)
+// A grid spans the entire screen and holds the coords for the sand, a vector of vectors holding particles
 std::vector<std::vector<Particle>> grid;
 std::vector<std::vector<Particle>> nextGrid;
-
-sf::Color sandColor = sf::Color(194, 178, 128);
 int main()
 {
+    // Init window
     sf::RenderWindow window(sf::VideoMode({ res_x, res_y }), "Falling Sand :");
     window.setVerticalSyncEnabled(true);
-    sf::Font font("PixelDigivolveItalic-dV8R.ttf");
 
+    // Init Grids
+    grid.assign(rows, std::vector<Particle>(cols));     // Grid of default EMPTY Particles
+    nextGrid.assign(rows, std::vector<Particle>(cols)); // Second buffer grid
 
-
-    // *** Initialize Grids ***
-    grid.assign(rows, std::vector<Particle>(cols)); // Creates grid of default EMPTY Particles
-    nextGrid.assign(rows, std::vector<Particle>(cols)); // Creates the second buffer
-
+    // Vertex array for grid
     sf::VertexArray gridVertices(sf::PrimitiveType::Triangles);
 
     // Initial Brush
@@ -94,12 +97,13 @@ int main()
     ParticleType brushType = ParticleType::SAND;
 
     // Brush UI Text
+    sf::Font font("PixelDigivolveItalic-dV8R.ttf");
     sf::Text brushUI(font);
     brushUI.setString("BRUSH SETTINGS: \nParticle Type: " + std::to_string(static_cast<int>(brushType)) + "\nBrush Size: " + std::to_string(brushSize));
     brushUI.setCharacterSize(24);
     brushUI.setFillColor(sf::Color(100,100,100));
 
-
+    // Time
     sf::Clock clock;
     float lastTime = 0;
 
@@ -109,11 +113,12 @@ int main()
         float currentTime = clock.getElapsedTime().asSeconds();
         float fps = 1.f / (currentTime - lastTime);
         lastTime = currentTime;
-        window.setTitle("Falling Sand : " + std::to_string(static_cast<int>(fps))); // Display in title
+        window.setTitle("Falling Sand : " + std::to_string(static_cast<int>(fps)));
 
         // --- Poll Events ---
         while (const std::optional event = window.pollEvent())
         {
+            // Window X button
             if (event->is<sf::Event::Closed>())
                 window.close();
 
@@ -121,39 +126,37 @@ int main()
                 // Window/UI
                 if (keyPressed->scancode == sf::Keyboard::Scan::Escape) { window.close(); }
 
-                // Brush Settings
-                if (keyPressed->scancode == sf::Keyboard::Scan::Hyphen) {
+                // -- Brush Settings --
+                if (keyPressed->scancode == sf::Keyboard::Scan::Hyphen) { // Increase brush size
                     if (brushSize > 1) {
                         brushSize--;
                         std::cout << brushSize;
                     }
                 }
-                if (keyPressed->scancode == sf::Keyboard::Scan::Equal) {
+                if (keyPressed->scancode == sf::Keyboard::Scan::Equal) { // Decrease brush dize
                     if (brushSize < 50) {
                         brushSize++;
                         std::cout << brushSize;
                     }
                 }
-                if (keyPressed->scancode == sf::Keyboard::Scan::Num1) {
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num1) { // Change to Sand
                     brushType = ParticleType::SAND;
                 }
-                if (keyPressed->scancode == sf::Keyboard::Scan::Num2) {
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num2) { // Change to Dirt
                     brushType = ParticleType::DIRT;
                 } 
-                if (keyPressed->scancode == sf::Keyboard::Scan::Num0) {
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num0) { // Change to Empty (Erase)
                     brushType = ParticleType::EMPTY;
                 }
             }
 
         }
 
-        // If Lmb held down spawn sand
+        // Spawn sand on click
         if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left))
         {
             mousePressed(grid, cellWidth, window, rows, cols, brushType, brushSize);
         }
-
-
 
         // --- UPDATE ---
         updateGrid(grid, nextGrid, rows, cols, brushType);
@@ -173,39 +176,37 @@ int main()
 
 void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vector<Particle>>& nextGrid, int rows, int cols, ParticleType brushType)
 {
-    // Starting state of grid to calc from
+    // Get current state of grid to calculate from
     nextGrid = grid;
 
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
+            // --- PARTICLE TYPE LOGIC ---
+            if (grid[row][col].type == ParticleType::SAND) { // -- Sand Logic --
 
-            // *** Check particle type ***
-            if (grid[row][col].type == ParticleType::SAND) { // If sand
-                // --- Sand Logic ---
-
-                if (row + 1 < rows) {
-                    // *** Read neighbour type ***
+                if (row + 1 < rows) { // If in bounds:
                     ParticleType belowType = grid[row + 1][col].type;
 
-                    if (belowType == ParticleType::EMPTY) { // If empty below
+                    if (belowType == ParticleType::EMPTY) { // If empty below:
                         // -- Fall Down --
                         nextGrid[row + 1][col] = grid[row][col]; // Copy particle data to new spot
                         nextGrid[row][col] = Particle{};         // Reset old spot to default (EMPTY)
                         continue; // Sand moved
                     }
-                    else {
+                    else { // If below filled:
                         // -- Fall Diagonally --
-                        int direction = (rand() % 2 == 0) ? -1 : 1;
+                        int direction = (rand() % 2 == 0) ? -1 : 1; // Get random direction to move in
+                        // Check if valid cell
                         int check_col_left = col - direction;
                         int check_col_right = col + direction;
                         bool canCheckLeft = (check_col_left >= 0 && check_col_left < cols);
                         bool canCheckRight = (check_col_right >= 0 && check_col_right < cols);
 
                         ParticleType below_left_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckLeft) { below_left_type = grid[row + 1][check_col_left].type; }
+                        if (canCheckLeft) { below_left_type = grid[row + 1][check_col_left].type; } // Get actual state
 
                         ParticleType below_right_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; }
+                        if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; } // Get actual state
 
                         if (canCheckLeft && below_left_type == ParticleType::EMPTY) { // Fall diagonally left
                             nextGrid[row + 1][check_col_left] = grid[row][col];
@@ -230,6 +231,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     // If empty above, turn to grass after awhile
                     if (aboveType == ParticleType::EMPTY) {
                         if (rand() % 100 < 1) {
+                            // TODO: Could maybe add delay here
                             canGrowGrass = true;
                         }
                     }
@@ -246,6 +248,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     // If empty above, turn to grass after awhile
                     if (aboveType != ParticleType::EMPTY) {
                         if (rand() % 100 < 1) {
+                            // TODO: Could maybe add delay here
                             nextGrid[row][col].type = ParticleType::DIRT;
                         }
                     }
@@ -266,7 +269,7 @@ void prepareVertices(const std::vector<std::vector<Particle>>& grid, sf::VertexA
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
 
-            // Only draw sand
+            // Prepare non empty cells
             if (grid[row][col].type != ParticleType::EMPTY) {
                 // Get particle color
                 sf::Color particleColor = getColorForType(grid[row][col].type);
@@ -296,20 +299,21 @@ void prepareVertices(const std::vector<std::vector<Particle>>& grid, sf::VertexA
 }
 void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf::RenderWindow& window, int rows, int cols, ParticleType brushType, int brushSize)
 {
+    // Get mouse pos
     int mouseCol = static_cast<int>(std::floor(sf::Mouse::getPosition(window).x / cellWidth));
     int mouseRow = static_cast<int>(std::floor(sf::Mouse::getPosition(window).y / cellWidth));
 
-    int extent = std::floor(brushSize /2);
+    int extent = std::floor(brushSize /2); // Define radius of brush
 
-    for (int i = -extent; i <= extent; i++) {
-        for (int j = -extent; j <= extent; j++) {
-            if (rand() % 100 < 54) {
+    for (int i = -extent; i <= extent; i++) {           // |
+        for (int j = -extent; j <= extent; j++) {       // | Iterate cells within extent of mousepos
+
+            if (rand() % 100 < 54) { // Chance to not spawn (makes random brush pattern)
+                // Define rows/cols brush is in
                 int col = mouseCol + i;
                 int row = mouseRow + j;
                 if (row >= 0 && row < rows && col >= 0 && col < cols) { // if within bounds
-                    if (grid[row][col].type == ParticleType::EMPTY) {
-                        grid[row][col].type = brushType;
-                    }
+                    grid[row][col].type = brushType; // Change Particle
                 }
             }
         }
@@ -330,7 +334,7 @@ sf::Color getColorForType(ParticleType type)
 
 void updateUI(sf::Text& text, ParticleType brushType, int brushSize)
 {
-    // Create a string representation of the brush type
+    // Strings from type
     std::string brushTypeName;
     switch (brushType) {
         case ParticleType::SAND:  brushTypeName = "Sand"; break;
