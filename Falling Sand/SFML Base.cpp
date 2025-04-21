@@ -12,6 +12,18 @@ make ui for changing sand type, make other materials
 #include <iostream>
 #include <string>
 
+// --- Structs & Enums ---
+enum class ParticleType {
+    EMPTY,
+    SAND,
+    // TODO: add more
+    // bool hasMoved = false; could use something like this to optimize update to only check moved or something.
+};
+
+struct Particle{
+    ParticleType type = ParticleType::EMPTY; // Default to empty, color tied to type
+};
+
 // --- Functions ---
 /**
  * @brief Updates the sands positions on the grids, handles gravity etc.
@@ -39,6 +51,7 @@ void prepareVertices(const std::vector<std::vector<int>>& grid, sf::VertexArray&
  * @param cols : The number of cols.
  */
 void mousePressed(std::vector<std::vector<int>>& grid, float cellWidth, sf::RenderWindow& window, int rows, int cols);
+sf::Color getColorForType(ParticleType type);
 
 // --- Variables ---
 unsigned int res_x = 1280.0f;
@@ -219,5 +232,14 @@ void mousePressed(std::vector<std::vector<int>>& grid, float cellWidth, sf::Rend
                 }
             }
         }
+    }
+}
+
+sf::Color getColorForType(ParticleType type)
+{
+    switch (type) {
+    case ParticleType::SAND:  return sf::Color(194, 178, 128); // Your sand color
+    case ParticleType::EMPTY: // Fallthrough intentional
+    default:                  return sf::Color::White; // Color for empty/unknown
     }
 }
