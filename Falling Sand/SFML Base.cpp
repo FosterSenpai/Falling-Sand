@@ -41,8 +41,8 @@ int rows = static_cast<int>(res_y / cellWidth);
 // - Grids -
 // A grid spans the entire screen and holds the coords for the sand, a vector of vectors
 // each element either 1 (sand) or 0 (empty)
-std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));      // Main grid
-std::vector<std::vector<int>> nextGrid(rows, std::vector<int>(cols, 0));  // Grid for calculating
+std::vector<std::vector<int>> grid(rows, std::vector<int>(cols, 0));     // Main grid
+std::vector<std::vector<int>> nextGrid(rows, std::vector<int>(cols, 0)); // Grid for calculating
 
 sf::Color sandColor = sf::Color(194, 178, 128);
 int main()
