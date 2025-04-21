@@ -75,6 +75,7 @@ enum class ParticleType {
     GRASS,
     WATER,
     SILT,
+    OIL,
 };
 
 struct Particle{
@@ -209,6 +210,9 @@ int main()
                 if (keyPressed->scancode == sf::Keyboard::Scan::Num4) { // Change to Silt
                     brushType = ParticleType::SILT;
                 }
+                if (keyPressed->scancode == sf::Keyboard::Scan::Num5) { // Change to Oil
+                    brushType = ParticleType::OIL;
+                }
             }
 
         }
@@ -248,7 +252,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                 if (row + 1 < rows) { // If in bounds:
                     ParticleType belowType = grid[row + 1][col].type;
 
-                    if (belowType == ParticleType::EMPTY) { // If empty below:
+                    if (belowType == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) { // If empty below:
                         // -- Fall Down --
                         nextGrid[row + 1][col] = grid[row][col]; // Copy data from current spot, into where its moving
                         nextGrid[row][col] = Particle{};         // Reset old spot
@@ -269,12 +273,12 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         ParticleType below_right_type = ParticleType::SAND; // Assume blocked
                         if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; } // Get actual state
 
-                        if (canCheckLeft && below_left_type == ParticleType::EMPTY) { // Fall diagonally left
+                        if (canCheckLeft && below_left_type == ParticleType::EMPTY && nextGrid[row + 1][check_col_left].type == ParticleType::EMPTY) { // Fall diagonally left
                             nextGrid[row + 1][check_col_left] = grid[row][col];
                             nextGrid[row][col] = {};
                             continue;
                         }
-                        else if (canCheckRight && below_right_type == ParticleType::EMPTY) { // Fall diagonally right
+                        else if (canCheckRight && below_right_type == ParticleType::EMPTY && nextGrid[row + 1][check_col_right].type == ParticleType::EMPTY) { // Fall diagonally right
                             nextGrid[row + 1][check_col_right] = grid[row][col];
                             nextGrid[row][col] = {};
                             continue;
@@ -320,50 +324,121 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
 
             }
             else if (grid[row][col].type == ParticleType::WATER) { // -- Water Logic --
-                if (row + 1 < rows) { // In bounds
-                    //move down
-                    if (grid[row + 1][col].type == ParticleType::EMPTY) {
-                        nextGrid[row + 1][col] = grid[row][col];
-                        nextGrid[row][col] = Particle{};
+				// -- Check down --
+                if (row + 1 < rows && grid[row + 1][col].type == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][col] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+                // -- Check diagonals down (Randomly) --
+                int direction = (rand() % 2 == 0) ? -1 : 1; // -1 = left, 1 = right
+                // Check first diagonal ( left or right random )
+                int diagCol1 = col + direction;
+                if (row + 1 < rows && diagCol1 >= 0 && diagCol1 < cols && grid[row + 1][diagCol1].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol1].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][diagCol1] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+                // Check Other diagonal
+                int diagCol2 = col - direction; // The other direction
+                if (row + 1 < rows && diagCol2 >= 0 && diagCol2 < cols && grid[row + 1][diagCol2].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol2].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][diagCol2] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+
+                // -- Check horizontal --
+
+                // Only allow horizontal movement if the particle is resting on something solid below its CURRENT position.
+                bool supportedBelow = (row + 1 < rows && grid[row + 1][col].type != ParticleType::EMPTY);
+
+                if (supportedBelow) {
+                    // Check first random horizontal direction
+                    int sideCol1 = col + direction;
+                    if (sideCol1 >= 0 && sideCol1 < cols && grid[row][sideCol1].type == ParticleType::EMPTY && nextGrid[row][sideCol1].type == ParticleType::EMPTY) {
+                        nextGrid[row][sideCol1] = grid[row][col];
+                        nextGrid[row][col] = {};
                         continue;
                     }
-                    else { // If below filled
-                        // -- Fall Diagonally --
-                        int direction = (rand() % 2 == 0) ? -1 : 1; // Get random direction to move in
-                        // Check if valid cell
-                        int check_col_left = col - direction;
-                        int check_col_right = col + direction;
-                        bool canCheckLeft = (check_col_left >= 0 && check_col_left < cols);
-                        bool canCheckRight = (check_col_right >= 0 && check_col_right < cols);
-
-                        ParticleType below_left_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckLeft) { below_left_type = grid[row + 1][check_col_left].type; } // Get actual state
-
-                        ParticleType below_right_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; } // Get actual state
-
-                        if (canCheckLeft && below_left_type == ParticleType::EMPTY) { // Fall diagonally left
-                            nextGrid[row + 1][check_col_left] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
-                        }
-                        else if (canCheckRight && below_right_type == ParticleType::EMPTY) { // Fall diagonally right
-                            nextGrid[row + 1][check_col_right] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
-                        }
-                        // If this hits, both bottom diagonals are full, move sideways
-                        else if (canCheckLeft && grid[row][col + 1].type == ParticleType::EMPTY) { 
-                            nextGrid[row][col + 1] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
-                        }
-                        else if (canCheckRight && grid[row][col - 1].type == ParticleType::EMPTY) {
-                            nextGrid[row][col - 1] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
-                        }
+                    // Check other horizontal directions
+                    int sideCol2 = col - direction; // The other direction
+                    if (sideCol2 >= 0 && sideCol2 < cols && grid[row][sideCol2].type == ParticleType::EMPTY && nextGrid[row][sideCol2].type == ParticleType::EMPTY) {
+                        nextGrid[row][sideCol2] = grid[row][col];
+                        nextGrid[row][col] = {};
+                        continue;
                     }
+                }
+            }
+            else if (grid[row][col].type == ParticleType::OIL) { // -- Oil Logic --
+                // -- Check down --
+                if (row + 1 < rows && grid[row + 1][col].type == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][col] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+                // -- Check diagonals down (Randomly) --
+                int direction = (rand() % 2 == 0) ? -1 : 1; // -1 = left, 1 = right
+                // Check first diagonal ( left or right random )
+                int diagCol1 = col + direction;
+                if (row + 1 < rows && diagCol1 >= 0 && diagCol1 < cols && grid[row + 1][diagCol1].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol1].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][diagCol1] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+                // Check Other diagonal
+                int diagCol2 = col - direction; // The other direction
+                if (row + 1 < rows && diagCol2 >= 0 && diagCol2 < cols && grid[row + 1][diagCol2].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol2].type == ParticleType::EMPTY) {
+                    nextGrid[row + 1][diagCol2] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+
+                // -- Check horizontal --
+
+                // Only allow horizontal movement if the particle is resting on something solid below its CURRENT position.
+                bool supportedBelow = (row + 1 < rows && grid[row + 1][col].type != ParticleType::EMPTY);
+
+                if (supportedBelow) {
+                    // Check first random horizontal direction
+                    int sideCol1 = col + direction;
+                    if (sideCol1 >= 0 && sideCol1 < cols && grid[row][sideCol1].type == ParticleType::EMPTY && nextGrid[row][sideCol1].type == ParticleType::EMPTY
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY)) {
+                        nextGrid[row][sideCol1] = grid[row][col];
+                        nextGrid[row][col] = {};
+                        continue;
+                    }
+                    // Check other horizontal directions
+                    int sideCol2 = col - direction; // The other direction
+                    if (sideCol2 >= 0 && sideCol2 < cols && grid[row][sideCol2].type == ParticleType::EMPTY && nextGrid[row][sideCol2].type == ParticleType::EMPTY
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY)) {
+                        nextGrid[row][sideCol2] = grid[row][col];
+                        nextGrid[row][col] = {};
+                        continue;
+                    }
+
+                    // --- Check WIDER horizontal (ONLY if immediate failed) ---
+                    // Check two cells over in random direction
+                    int sideCol1_far = col + 2 * direction;
+                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type != ParticleType::EMPTY) && // Check if immediate is blocked or OOB
+                        (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
+                    {
+                        nextGrid[row][sideCol1_far] = grid[row][col]; // Move 2 steps
+                        nextGrid[row][col] = {};
+                        continue; // Moved 2 steps
+                    }
+
+                    // Check two cells over in other direction
+                    int sideCol2_far = col - 2 * direction;
+                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type != ParticleType::EMPTY) &&
+                        (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
+                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
+                    {
+                        nextGrid[row][sideCol2_far] = grid[row][col];
+                        nextGrid[row][col] = {};
+                        continue;
+                    }
+                    // TODO: ADD furthure horizontal movement for water check 3 & 4 maybe 5 blocks
                 }
             }
             else if (grid[row][col].type == ParticleType::SILT) { // -- Silt Logic --
@@ -429,7 +504,8 @@ void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf:
     for (int i = -extent; i <= extent; i++) {           // |
         for (int j = -extent; j <= extent; j++) {       // | Iterate cells within extent of mousepos
 
-            if (rand() % 100 < 54) { // Chance to not spawn (makes random brush pattern)
+			// TODO: Change random chance (which is pretty much brush density) for each particle type
+            if (rand() % 100 < 20) { // Chance to not spawn (makes random brush pattern)
                 // Define rows/cols brush is in
                 int col = mouseCol + i;
                 int row = mouseRow + j;
@@ -450,6 +526,7 @@ sf::Color getColorForType(ParticleType type)
     case ParticleType::GRASS: return sf::Color(40, 140, 40);
     case ParticleType::WATER: return sf::Color(60, 120, 180);
     case ParticleType::SILT:  return sf::Color(115, 105, 90);
+    case ParticleType::OIL:  return sf::Color(90, 30, 30); // TODO: Get bettet color, reddy black
 
     case ParticleType::EMPTY: return sf::Color::White;
     default:                  return sf::Color::Black; // Unknown particles are black
@@ -466,6 +543,7 @@ void updateUI(sf::Text& text, ParticleType brushType, int brushSize)
         case ParticleType::GRASS: brushTypeName = "Grass"; break;
         case ParticleType::WATER: brushTypeName = "Water"; break;
         case ParticleType::SILT:  brushTypeName = "Silt"; break;
+        case ParticleType::OIL:  brushTypeName = "Oil"; break;
         case ParticleType::EMPTY: brushTypeName = "Empty"; break;
         default:                  brushTypeName = "Unknown"; break;
     }
