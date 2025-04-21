@@ -196,28 +196,6 @@ void prepareVertices(const std::vector<std::vector<int>>& grid, sf::VertexArray&
                 vertices.append(sf::Vertex(bottomRight, color));
                 vertices.append(sf::Vertex(bottomLeft, color));
             }
-            //else {
-            //    // Calculate corner coordinates
-            //    float left = static_cast<float>(col) * cellWidth;
-            //    float top = static_cast<float>(row) * cellWidth;
-            //    float right = left + cellWidth;
-            //    float bottom = top + cellWidth;
-            //    // Define corner vecs
-            //    sf::Vector2f topLeft(left, top);
-            //    sf::Vector2f topRight(right, top);
-            //    sf::Vector2f bottomLeft(left, bottom);
-            //    sf::Vector2f bottomRight(right, bottom);
-
-            //    // Create vertices for 2 tris
-            //    // - Tri 1 -
-            //    vertices.append(sf::Vertex(topLeft, sf::Color(255,255,255)));
-            //    vertices.append(sf::Vertex(topRight, sf::Color(255, 255, 255)));
-            //    vertices.append(sf::Vertex(bottomRight, sf::Color(255, 255, 255)));
-            //    // - Tri 2 -
-            //    vertices.append(sf::Vertex(topLeft, sf::Color(255, 255, 255)));
-            //    vertices.append(sf::Vertex(bottomRight, sf::Color(255, 255, 255)));
-            //    vertices.append(sf::Vertex(bottomLeft, sf::Color(255, 255, 255)));
-            //}
         }
     }
 }
