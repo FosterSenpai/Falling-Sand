@@ -83,7 +83,7 @@ int main()
 {
     // Init window
     sf::RenderWindow window(sf::VideoMode({ res_x, res_y }), "Falling Sand :");
-    window.setVerticalSyncEnabled(true);
+    window.setFramerateLimit(60);
 
     // Init Grids
     grid.assign(rows, std::vector<Particle>(cols));     // Grid of default EMPTY Particles
