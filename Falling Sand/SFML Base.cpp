@@ -369,10 +369,9 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     }
 
                     // --- Check WIDER horizontal (ONLY if immediate failed) ---
-                    // TODO: Make movement only skip over other water particles so no jumping through walls.
                     // Check two cells over in random direction
                     int sideCol1_far = col + 2 * direction;
-                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type != ParticleType::EMPTY) && // Check if immediate is blocked or OOB
+                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type == ParticleType::WATER) && // Check if immediate is water or OOB
                         (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
                         && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
                     {
@@ -383,7 +382,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
 
                     // Check two cells over in other direction
                     int sideCol2_far = col - 2 * direction;
-                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type != ParticleType::EMPTY) &&
+                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type == ParticleType::WATER) &&
                         (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
                         && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
                     {
