@@ -241,6 +241,9 @@ int main()
 
 void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vector<Particle>>& nextGrid, int rows, int cols, ParticleType brushType)
 {
+    // TODO: Reading grid left to right every time makes right movement bias
+    // Swapping sweep dir should help
+
     // Get current state of grid to calculate from
     nextGrid = grid;
 
@@ -258,7 +261,18 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         nextGrid[row][col] = Particle{};         // Reset old spot
                         continue;                                // Sand moved
                     }
+                    else if (belowType == ParticleType::WATER) { // If water below
+                        // Displace water and fall through
+                        // TODO: Could make this and other logics functions
+                        // TODO: Stop water from displacing upward through particles falling from brush
+                        // TODO: diagonal sand fall through water
+                        Particle oldWater = grid[row + 1][col]; // Save water particle incase it hold important data
+                        nextGrid[row + 1][col] = grid[row][col];    // copy sand where water was
+                        nextGrid[row][col] = oldWater;              // Put water where sand was
+                        continue;
+                    }
                     else { // If below filled:
+
                         // -- Fall Diagonally --
                         int direction = (rand() % 2 == 0) ? -1 : 1; // Get random direction to move in
                         // Check if valid cell
@@ -267,21 +281,60 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         bool canCheckLeft = (check_col_left >= 0 && check_col_left < cols);
                         bool canCheckRight = (check_col_right >= 0 && check_col_right < cols);
 
-                        ParticleType below_left_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckLeft) { below_left_type = grid[row + 1][check_col_left].type; } // Get actual state
+                        // --- Diagonal Checks (Handles EMPTY and WATER) ---
+                        ParticleType target_left_type = ParticleType::SAND; // Assume blocked initially
+                        if (canCheckLeft) { target_left_type = grid[row + 1][check_col_left].type; }
 
-                        ParticleType below_right_type = ParticleType::SAND; // Assume blocked
-                        if (canCheckRight) { below_right_type = grid[row + 1][check_col_right].type; } // Get actual state
+                        ParticleType target_right_type = ParticleType::SAND; // Assume blocked initially
+                        if (canCheckRight) { target_right_type = grid[row + 1][check_col_right].type; }
 
-                        if (canCheckLeft && below_left_type == ParticleType::EMPTY && nextGrid[row + 1][check_col_left].type == ParticleType::EMPTY) { // Fall diagonally left
-                            nextGrid[row + 1][check_col_left] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
+                        bool movedDiagonally = false;
+
+                        // Check preferred direction first (left or right based on 'direction')
+                        int check_col_1 = col + direction;
+                        // Get type of target cell
+                        ParticleType target_type_1 = (direction == -1) ? target_left_type : target_right_type;
+                        bool canCheck1 = (direction == -1) ? canCheckLeft : canCheckRight;
+
+                        if (canCheck1 && (target_type_1 == ParticleType::EMPTY || target_type_1 == ParticleType::WATER)) {
+                            // Check nextGrid to prevent conflicts if possible
+                            if (nextGrid[row + 1][check_col_1].type == ParticleType::EMPTY || nextGrid[row + 1][check_col_1].type == target_type_1) {
+                                if (target_type_1 == ParticleType::EMPTY) { // If target cell empty
+                                    nextGrid[row + 1][check_col_1] = grid[row][col]; // Move sand to empty spot
+                                    nextGrid[row][col] = {};                         // Clear old spot
+                                }
+                                else { // If target cell water
+                                    nextGrid[row + 1][check_col_1] = grid[row][col]; // Move sand to water spot
+                                    nextGrid[row][col] = grid[row + 1][check_col_1]; // Move water to sand spot
+                                }
+                                movedDiagonally = true;
+                            }
                         }
-                        else if (canCheckRight && below_right_type == ParticleType::EMPTY && nextGrid[row + 1][check_col_right].type == ParticleType::EMPTY) { // Fall diagonally right
-                            nextGrid[row + 1][check_col_right] = grid[row][col];
-                            nextGrid[row][col] = {};
-                            continue;
+
+                        // If didn't move in preferred direction, check the other direction
+                        if (!movedDiagonally) {
+                            int check_col_2 = col - direction;
+                            ParticleType target_type_2 = (direction == -1) ? target_right_type : target_left_type;
+                            bool canCheck2 = (direction == -1) ? canCheckRight : canCheckLeft;
+
+                            if (canCheck2 && (target_type_2 == ParticleType::EMPTY || target_type_2 == ParticleType::WATER)) {
+                                // Check nextGrid to prevent conflicts if possible (optional refinement)
+                                if (nextGrid[row + 1][check_col_2].type == ParticleType::EMPTY || nextGrid[row + 1][check_col_2].type == target_type_2) {
+                                    if (target_type_2 == ParticleType::EMPTY) {
+                                        nextGrid[row + 1][check_col_2] = grid[row][col];
+                                        nextGrid[row][col] = {};                        
+                                    }
+                                    else {
+                                        nextGrid[row + 1][check_col_2] = grid[row][col];
+                                        nextGrid[row][col] = grid[row + 1][check_col_2];
+                                    }
+                                    movedDiagonally = true;
+                                }
+                            }
+                        }
+
+                        if (movedDiagonally) {
+                            continue; // Sand moved diagonally
                         }
                     }
                 }
@@ -324,6 +377,14 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
 
             }
             else if (grid[row][col].type == ParticleType::WATER) { // -- Water Logic --
+
+                // If this water particle's current position in the nextGrid has ALREADY
+                // been overwritten by something else (e.g., Oil/Sand/Silt swapping down),
+                // it means this water particle has been displaced. It should NOT try
+                // to execute its own movement logic this frame.
+                if (nextGrid[row][col].type != ParticleType::WATER) {
+                    continue;
+                }
 				// -- Check down --
                 if (row + 1 < rows && grid[row + 1][col].type == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) {
                     nextGrid[row + 1][col] = grid[row][col];
@@ -348,12 +409,109 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                 }
 
                 // -- Check horizontal --
+                int h_direction = (rand() % 2 == 0) ? -1 : 1;
+                // Check first random horizontal direction
+                int sideCol1 = col + h_direction;
+                if (sideCol1 >= 0 && sideCol1 < cols && grid[row][sideCol1].type == ParticleType::EMPTY && nextGrid[row][sideCol1].type == ParticleType::EMPTY) {
+                    nextGrid[row][sideCol1] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+                // Check other horizontal directions
+                int sideCol2 = col - h_direction; // The other direction
+                if (sideCol2 >= 0 && sideCol2 < cols && grid[row][sideCol2].type == ParticleType::EMPTY && nextGrid[row][sideCol2].type == ParticleType::EMPTY) {
+                    nextGrid[row][sideCol2] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
 
-                // Only allow horizontal movement if the particle is resting on something solid below its CURRENT position.
+                // --- Check WIDER horizontal (ONLY if immediate failed) ---
+                // Check two cells over in random direction
+                int sideCol1_far = col + 2 * h_direction;
+                if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type == ParticleType::WATER) && // Check if immediate is water or OOB
+                    (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
+                    )
+                {
+                    nextGrid[row][sideCol1_far] = grid[row][col]; // Move 2 steps
+                    nextGrid[row][col] = {};
+                    continue; // Moved 2 steps
+                }
+
+                // Check two cells over in other direction
+                int sideCol2_far = col - 2 * h_direction;
+                if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type == ParticleType::WATER) &&
+                    (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
+                    )
+                {
+                    nextGrid[row][sideCol2_far] = grid[row][col];
+                    nextGrid[row][col] = {};
+                    continue;
+                }
+            }
+            else if (grid[row][col].type == ParticleType::OIL) { // -- Oil Logic --
+                // Oil is denser than water and should fall through it.
+
+                bool moved = false; // Flag to track if the particle moved this step
+
+                // --- Priority 1: Move Down ---
+                if (row + 1 < rows) { // Check bounds below
+                    ParticleType belowType = grid[row + 1][col].type;
+
+                    if (belowType == ParticleType::EMPTY) {
+                        // Check if the target spot in nextGrid is also empty (standard collision check)
+                        if (nextGrid[row + 1][col].type == ParticleType::EMPTY) {
+                            nextGrid[row + 1][col] = grid[row][col]; // Move oil down
+                            nextGrid[row][col] = {};                // Clear old spot
+                            moved = true;
+                        }
+                    }
+                    else if (belowType == ParticleType::WATER) {
+                        // Attempt to SWAP with water below.
+                        // Perform the swap directly in nextGrid.
+                        // We assume the oil 'wins' the spot.
+                        nextGrid[row + 1][col] = grid[row][col];     // Oil moves down into water's spot
+                        nextGrid[row][col] = grid[row + 1][col];   // Water moves up into oil's spot
+                        moved = true;
+                    }
+                    // If below is neither EMPTY nor WATER (e.g., SAND, DIRT), oil stops vertically for now.
+                }
+
+                // --- Priority 2: Move Diagonally Down ---
+                if (!moved && row + 1 < rows) { // Only try diagonal if couldn't move straight down
+                    int direction = (rand() % 2 == 0) ? -1 : 1; // Random preference: -1=left, 1=right
+
+                    for (int i = 0; i < 2; ++i) { // Check both diagonals (preferred one first)
+                        int check_col = col + direction;
+                        if (check_col >= 0 && check_col < cols) { // Check horizontal bounds
+                            ParticleType targetType = grid[row + 1][check_col].type;
+
+                            if (targetType == ParticleType::EMPTY) {
+                                // Check collision in nextGrid for empty spot
+                                if (nextGrid[row + 1][check_col].type == ParticleType::EMPTY) {
+                                    nextGrid[row + 1][check_col] = grid[row][col]; // Move oil diagonally
+                                    nextGrid[row][col] = {};                      // Clear old spot
+                                    moved = true;
+                                    break; // Exit diagonal check loop once moved
+                                }
+                            }
+                            else if (targetType == ParticleType::WATER) {
+                                // Attempt SWAP with water diagonally
+                                nextGrid[row + 1][check_col] = grid[row][col];     // Oil moves diagonally
+                                nextGrid[row][col] = grid[row + 1][check_col];   // Water moves into oil's old spot
+                                moved = true;
+                                break; // Exit diagonal check loop once moved
+                            }
+                        }
+                        direction *= -1; // Flip direction to check the other side on the next iteration
+                    }
+                }
+
+                // --- Priority 3: Horizontal Movement (Optional) ---
                 bool supportedBelow = (row + 1 < rows && grid[row + 1][col].type != ParticleType::EMPTY);
 
-                if (supportedBelow) {
+                if (supportedBelow && !moved) {
                     // Check first random horizontal direction
+                    int direction = (rand() % 2 == 0) ? -1 : 1; // Random preference: -1=left, 1=right
                     int sideCol1 = col + direction;
                     if (sideCol1 >= 0 && sideCol1 < cols && grid[row][sideCol1].type == ParticleType::EMPTY && nextGrid[row][sideCol1].type == ParticleType::EMPTY) {
                         nextGrid[row][sideCol1] = grid[row][col];
@@ -367,86 +525,27 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         nextGrid[row][col] = {};
                         continue;
                     }
-
-                    // --- Check WIDER horizontal (ONLY if immediate failed) ---
-                    // Check two cells over in random direction
-                    int sideCol1_far = col + 2 * direction;
-                    if ((sideCol1 < 0 || sideCol1 >= cols || grid[row][sideCol1].type == ParticleType::WATER) && // Check if immediate is water or OOB
-                        (sideCol1_far >= 0 && sideCol1_far < cols && grid[row][sideCol1_far].type == ParticleType::EMPTY && nextGrid[row][sideCol1_far].type == ParticleType::EMPTY) // Check if far is clear
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
-                    {
-                        nextGrid[row][sideCol1_far] = grid[row][col]; // Move 2 steps
-                        nextGrid[row][col] = {};
-                        continue; // Moved 2 steps
-                    }
-
-                    // Check two cells over in other direction
-                    int sideCol2_far = col - 2 * direction;
-                    if ((sideCol2 < 0 || sideCol2 >= cols || grid[row][sideCol2].type == ParticleType::WATER) &&
-                        (sideCol2_far >= 0 && sideCol2_far < cols && grid[row][sideCol2_far].type == ParticleType::EMPTY && nextGrid[row][sideCol2_far].type == ParticleType::EMPTY) // Check if far is clear
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY))
-                    {
-                        nextGrid[row][sideCol2_far] = grid[row][col];
-                        nextGrid[row][col] = {};
-                        continue;
-                    }
-                }
-            }
-            else if (grid[row][col].type == ParticleType::OIL) { // -- Oil Logic --
-                // -- Check down --
-                if (row + 1 < rows && grid[row + 1][col].type == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) {
-                    nextGrid[row + 1][col] = grid[row][col];
-                    nextGrid[row][col] = {};
-                    continue;
-                }
-                // -- Check diagonals down (Randomly) --
-                int direction = (rand() % 100 < 50) ? -1 : 1; // -1 = left, 1 = right
-                // Check first diagonal ( left or right random )
-                int diagCol1 = col + direction;
-                if (row + 1 < rows && diagCol1 >= 0 && diagCol1 < cols && grid[row + 1][diagCol1].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol1].type == ParticleType::EMPTY) {
-                    nextGrid[row + 1][diagCol1] = grid[row][col];
-                    nextGrid[row][col] = {};
-                    continue;
-                }
-                // Check Other diagonal
-                int diagCol2 = col - direction; // The other direction
-                if (row + 1 < rows && diagCol2 >= 0 && diagCol2 < cols && grid[row + 1][diagCol2].type == ParticleType::EMPTY && nextGrid[row + 1][diagCol2].type == ParticleType::EMPTY) {
-                    nextGrid[row + 1][diagCol2] = grid[row][col];
-                    nextGrid[row][col] = {};
-                    continue;
                 }
 
-                // -- Check horizontal --
-
-                // Only allow horizontal movement if the particle is resting on something solid below its CURRENT position.
-                bool supportedBelow = (row + 1 < rows && grid[row + 1][col].type != ParticleType::EMPTY);
-
-                if (supportedBelow) {
-                    // Check first random horizontal direction
-                    int sideCol1 = col + direction;
-                    if (sideCol1 >= 0 && sideCol1 < cols && grid[row][sideCol1].type == ParticleType::EMPTY && nextGrid[row][sideCol1].type == ParticleType::EMPTY
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY)) {
-                        nextGrid[row][sideCol1] = grid[row][col];
-                        nextGrid[row][col] = {};
-                        continue;
-                    }
-                    // Check other horizontal directions
-                    int sideCol2 = col - direction; // The other direction
-                    if (sideCol2 >= 0 && sideCol2 < cols && grid[row][sideCol2].type == ParticleType::EMPTY && nextGrid[row][sideCol2].type == ParticleType::EMPTY
-                        && (row + 1 < rows && grid[row + 1][sideCol1].type != ParticleType::EMPTY)) {
-                        nextGrid[row][sideCol2] = grid[row][col];
-                        nextGrid[row][col] = {};
-                        continue;
-                    }
+                if (moved) {
+                    continue; // Skip to the next particle in the main loop if oil moved/swapped
                 }
-            }
+
+                } // End Oil Logic
             else if (grid[row][col].type == ParticleType::SILT) { // -- Silt Logic --
                 if (row + 1 < rows) { // In bounds
                     
                     // Only fall downward, no sideways
-                    if (grid[row + 1][col].type == ParticleType::EMPTY) {
+                    if (grid[row + 1][col].type == ParticleType::EMPTY && nextGrid[row + 1][col].type == ParticleType::EMPTY) {
                         nextGrid[row + 1][col] = grid[row][col];
                         nextGrid[row][col] = Particle{};
+                        continue;
+                    }
+                    else if (grid[row + 1][col].type == ParticleType::WATER) { // If water below
+                        // Displace water and fall through
+                        Particle oldWater = grid[row + 1][col]; // Save water particle incase it hold important data
+                        nextGrid[row + 1][col] = grid[row][col];    // copy sand where water was
+                        nextGrid[row][col] = oldWater;              // Put water where sand was
                         continue;
                     }
                 }
@@ -525,7 +624,7 @@ sf::Color getColorForType(ParticleType type)
     case ParticleType::GRASS: return sf::Color(40, 140, 40);
     case ParticleType::WATER: return sf::Color(60, 120, 180);
     case ParticleType::SILT:  return sf::Color(115, 105, 90);
-    case ParticleType::OIL:  return sf::Color(90, 30, 30); // TODO: Get bettet color, reddy black
+    case ParticleType::OIL:  return sf::Color(90, 30, 30);
 
     case ParticleType::EMPTY: return sf::Color::White;
     default:                  return sf::Color::Black; // Unknown particles are black
