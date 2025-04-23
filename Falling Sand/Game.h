@@ -1,4 +1,13 @@
-// Game.h
+// ============================================================================
+// Project:     Falling Sand Simulation
+// File:        Game.h
+// Author:      Foster Rae
+// Date Created:2025-04-23
+// Last Update: 2025-04-23
+// Version:     1.0
+// Description: Header file for the Game class. 
+//              Handles the main game loop, window management, input handling.
+// ============================================================================
 #pragma once
 
 #include <SFML/Graphics.hpp>
