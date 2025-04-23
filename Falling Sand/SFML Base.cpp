@@ -66,22 +66,8 @@ Break up to follow OOP
 #include <vector>
 #include <iostream>
 #include <string>
-
-// --- Structs & Enums ---
-enum class ParticleType {
-    EMPTY,
-    SAND,
-    DIRT,
-    GRASS,
-    WATER,
-    SILT,
-    OIL,
-};
-
-struct Particle{
-    // -- Particle Data --
-    ParticleType type = ParticleType::EMPTY; // Default to empty, color tied to type
-};
+#include "Particle.h"
+#include "Utils.h"
 
 // --- Functions ---
 /**
@@ -110,12 +96,6 @@ void prepareVertices(const std::vector<std::vector<Particle>>& grid, sf::VertexA
  * @param cols : The number of cols.
  */
 void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf::RenderWindow& window, int rows, int cols, ParticleType brushType, int brushSize);
-/**
- * @brief Get corresponding color from particle enum
- * @param type The type of particle
- * @return The corresponding sf::Color to the particle
- */
-sf::Color getColorForType(ParticleType type);
 /**
  * @brief Update the brush text UI
  * @param text The UI text
@@ -336,10 +316,23 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                         if (movedDiagonally) {
                             continue; // Sand moved diagonally
                         }
+
+                        // If water above sand turn into wet sand
+                        if (row > 0) { // Bounds check
+                            ParticleType aboveType = grid[row - 1][col].type;
+
+                            if (aboveType == ParticleType::WATER) {
+                                if (rand() % 100 < 10) {
+                                    nextGrid[row][col].type = ParticleType::SANDWET;
+                                }
+                            }
+                        }
+                        // TODO: add logic for wet sand, make movement different and turn back to dry sand after a bit
+
                     }
                 }
             }
-            else if (grid[row][col].type == ParticleType::DIRT) { // If dirt
+            else if (grid[row][col].type == ParticleType::DIRT) { // -- Dirt Logic --
 
                 // - Grass Spread Logic -
                 bool canGrowGrass = false;
@@ -361,7 +354,7 @@ void updateGrid(std::vector<std::vector<Particle>>& grid, std::vector<std::vecto
                     nextGrid[row][col].type = ParticleType::GRASS;
                 }
             }
-            else if (grid[row][col].type == ParticleType::GRASS) { // If grass
+            else if (grid[row][col].type == ParticleType::GRASS) { // -- Grass Logic --
                 if (row > 0) { // Bounds check
                     ParticleType aboveType = grid[row - 1][col].type;
 
@@ -566,7 +559,7 @@ void prepareVertices(const std::vector<std::vector<Particle>>& grid, sf::VertexA
             // Prepare non empty cells
             if (grid[row][col].type != ParticleType::EMPTY) {
                 // Get particle color
-                sf::Color particleColor = getColorForType(grid[row][col].type);
+                sf::Color particleColor = Utils::getColorForType(grid[row][col].type);
                 // Calculate corner coordinates
                 float left = static_cast<float>(col) * cellWidth;
                 float top = static_cast<float>(row) * cellWidth;
@@ -615,28 +608,13 @@ void mousePressed(std::vector<std::vector<Particle>>& grid, float cellWidth, sf:
     }
 }
 
-sf::Color getColorForType(ParticleType type)
-{
-    // TODO: Make a random variation in brightness of color 
-    switch (type) {
-    case ParticleType::SAND:  return sf::Color(194, 178, 128);
-    case ParticleType::DIRT:  return sf::Color(133, 94, 66);
-    case ParticleType::GRASS: return sf::Color(40, 140, 40);
-    case ParticleType::WATER: return sf::Color(60, 120, 180);
-    case ParticleType::SILT:  return sf::Color(115, 105, 90);
-    case ParticleType::OIL:  return sf::Color(90, 30, 30);
-
-    case ParticleType::EMPTY: return sf::Color::White;
-    default:                  return sf::Color::Black; // Unknown particles are black
-    }
-}
-
 void updateUI(sf::Text& text, ParticleType brushType, int brushSize)
 {
     // Strings from type
     std::string brushTypeName;
     switch (brushType) {
         case ParticleType::SAND:  brushTypeName = "Sand"; break;
+        case ParticleType::SANDWET:  brushTypeName = "Wet Sand"; break;
         case ParticleType::DIRT:  brushTypeName = "Dirt"; break;
         case ParticleType::GRASS: brushTypeName = "Grass"; break;
         case ParticleType::WATER: brushTypeName = "Water"; break;
