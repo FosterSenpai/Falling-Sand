@@ -1,9 +1,9 @@
 // World.cpp
-#include "World.h"   // Include the header for our class definition
-#include <vector>    // Used for the grid members
-#include <stdexcept> // Used for throwing exceptions on invalid input (optional)
-#include <cstdlib>   // For rand() - will be needed in particle updates
-#include <algorithm> // For std::max - might be needed later
+#include "World.h"
+#include <vector>
+#include <stdexcept>
+#include <cstdlib>   // For rand()
+#include <algorithm> // For std::max
 
 // **=== Constructors & Destructors ===**
 
@@ -56,7 +56,15 @@ Particle World::getParticle(int r, int c) const {
 
 // -- Public Setters --
 
-void World::setParticle(int r, int c, ParticleType type) {} // TODO: FILL
+void World::setParticle(int r, int c, ParticleType type) 
+{
+	if (isInBounds(r, c)) {
+		m_grid[r][c].type = type;
+	}
+	else {
+		throw std::out_of_range("Coordinates are out of bounds.");
+	}
+}
 
 // **=== Private Methods ===**
 
@@ -67,6 +75,57 @@ bool World::isInBounds(int r, int c) const
     bool rowInBounds = (r >= 0 && r < m_rows);
     bool colInBounds = (r >= 0 && c < m_cols);
     return rowInBounds && colInBounds;
+}
+
+bool World::isNextGridCellEmpty(int r_target, int c_target) const {
+    if (!isInBounds(r_target, c_target)) {
+        // Can't move into an out-of-bounds cell, so it's not "empty" for movement purposes.
+        return false;
+    }
+	// Return true if the target cell in m_nextGrid is empty
+    return (m_nextGrid[r_target][c_target].type == ParticleType::EMPTY);
+}
+
+NeighborhoodInfo World::getNeighborhoodInfo(int r, int c) const {
+    NeighborhoodInfo info; // Create an instance of the struct
+
+	// Check availability in m_nextGrid for neighbors
+    info.canMoveUp = isNextGridCellEmpty(r - 1, c);
+    info.canMoveDown = isNextGridCellEmpty(r + 1, c);
+    info.canMoveLeft = isNextGridCellEmpty(r, c - 1);
+    info.canMoveRight = isNextGridCellEmpty(r, c + 1);
+    info.canMoveDiagUL = isNextGridCellEmpty(r - 1, c - 1);
+    info.canMoveDiagUR = isNextGridCellEmpty(r - 1, c + 1);
+    info.canMoveDiagDL = isNextGridCellEmpty(r + 1, c - 1);
+    info.canMoveDiagDR = isNextGridCellEmpty(r + 1, c + 1);
+
+	// Get initial types from m_grid for neighbors
+    info.typeAbove = getNeighborType(r, c, -1, 0);
+    info.typeBelow = getNeighborType(r, c, 1, 0);
+    info.typeLeft = getNeighborType(r, c, 0, -1);
+    info.typeRight = getNeighborType(r, c, 0, 1);
+    info.typeDiagUL = getNeighborType(r, c, -1, -1);
+    info.typeDiagUR = getNeighborType(r, c, -1, 1);
+    info.typeDiagDL = getNeighborType(r, c, 1, -1);
+    info.typeDiagDR = getNeighborType(r, c, 1, 1);
+
+    return info; // Return the populated struct
+}
+
+ParticleType World::getNeighborType(int r, int c, int dr, int dc) const
+{
+	// Check if the neighbor coordinates are within bounds
+	int neighborRow = r + dr;
+	int neighborCol = c + dc;
+    if (isInBounds(neighborRow, neighborCol)) {
+		// If in bounds, return the type of the neighbor particle
+		return m_grid[neighborRow][neighborCol].type;
+    }
+    else {
+		return ParticleType::DIRT; // Treat out-of-bounds as solid TODO: Make boundary type
+    }
+
+    return ParticleType();
 }
 
 // **=== Particle Logic ===**
@@ -107,7 +166,97 @@ void World::updateParticle(int r, int c)
     }
 }
 
-void World::updateSand(int r, int c){} // TODO: FILL
+void World::updateSand(int r, int c)
+{
+	// Get neighboring cells information
+    NeighborhoodInfo neighbors = getNeighborhoodInfo(r, c);
+	// -- Try to fall down --
+    if (neighbors.typeBelow == ParticleType::EMPTY && neighbors.canMoveDown) {
+
+		m_nextGrid[r + 1][c] = m_grid[r][c]; // Copy data from current spot, into where its moving
+		m_nextGrid[r][c] = m_grid[r + 1][c]; // Move what was there into the current spot
+		return;
+    }
+	// -- Try to fall through water --
+	else if (neighbors.typeBelow == ParticleType::WATER) {
+
+		// Check next grid 
+		if (m_nextGrid[r][c].type == ParticleType::SAND &&      // Check to make sure positions havent
+			m_nextGrid[r + 1][c].type == ParticleType::WATER) { // already been overwritten in the next grid
+
+			// Swap sand and water
+			m_nextGrid[r + 1][c] = m_grid[r][c]; // Copy sand data into water on next grid
+			m_nextGrid[r][c] = m_grid[r + 1][c]; // Copy water data into sand on next grid
+            return;
+        }
+	}
+	// --- Try to fall diagonally --
+    else {
+        int direction = (rand() % 2 == 0) ? -1 : 1; // Random direction bias
+
+        if (direction == -1) { // Down Left
+            if (neighbors.typeDiagDL == ParticleType::EMPTY && // If DL is empty
+                neighbors.canMoveDiagDL) {                     // And can move there (Empty in next grid)
+
+                m_nextGrid[r + 1][c - 1] = m_grid[r][c]; // Copy data from current spot, into where its moving
+                m_nextGrid[r][c] = m_grid[r + 1][c - 1]; // Move what was there into the current spot
+                return;
+            }
+            else if (neighbors.typeDiagDL == ParticleType::WATER) {// If DL is water
+                if (m_nextGrid[r][c].type == ParticleType::SAND &&          // Check to make sure positions havent
+                    m_nextGrid[r + 1][c - 1].type == ParticleType::WATER) { // already been overwritten in the next grid
+
+                    m_nextGrid[r + 1][c - 1] = m_grid[r][c]; // Copy sand data into water on next grid
+                    m_nextGrid[r][c] = m_grid[r + 1][c - 1]; // Copy water data into sand on next grid
+                    return;
+                }
+            }
+            // If we hit here, DL didnt work do check DR
+            else if (neighbors.typeDiagDR == ParticleType::EMPTY && neighbors.canMoveDiagDR) {
+				m_nextGrid[r + 1][c + 1] = m_grid[r][c]; // Copy data from current spot, into where its moving
+				m_nextGrid[r][c] = m_grid[r + 1][c + 1]; // Move what was there into the current spot
+				return;
+			}
+			else if (neighbors.typeDiagDR == ParticleType::WATER) {// If DR is water
+				if (m_nextGrid[r][c].type == ParticleType::SAND &&          // Check to make sure positions havent
+					m_nextGrid[r + 1][c + 1].type == ParticleType::WATER) { // already been overwritten in the next grid
+                }
+            }
+            else { // Down Right
+                if (neighbors.typeDiagDR == ParticleType::EMPTY && // If DR is empty
+                    neighbors.canMoveDiagDR) {                     // And can move there (Empty in next grid)
+
+                    m_nextGrid[r + 1][c + 1] = m_grid[r][c]; // Copy data from current spot, into where its moving
+                    m_nextGrid[r][c] = m_grid[r + 1][c + 1]; // Move what was there into the current spot
+                }
+                else if (neighbors.typeDiagDR == ParticleType::WATER) {// If DR is water
+                    if (m_nextGrid[r][c].type == ParticleType::SAND &&          // Check to make sure positions havent
+                        m_nextGrid[r + 1][c + 1].type == ParticleType::WATER) { // already been overwritten in the next grid
+
+                        m_nextGrid[r + 1][c + 1] = m_grid[r][c]; // Copy sand data into water on next grid
+                        m_nextGrid[r][c] = m_grid[r + 1][c + 1]; // Copy water data into sand on next grid
+                        return;
+                    }
+                }
+                // If we hit here, DR didnt work do check DL
+                else if (neighbors.typeDiagDL == ParticleType::EMPTY && neighbors.canMoveDiagDL) {
+                    m_nextGrid[r + 1][c - 1] = m_grid[r][c]; // Copy data from current spot, into where its moving
+                    m_nextGrid[r][c] = m_grid[r + 1][c - 1]; // Move what was there into the current spot
+                    return;
+                }
+                else if (neighbors.typeDiagDL == ParticleType::WATER) {// If DL is water
+                    if (m_nextGrid[r][c].type == ParticleType::SAND &&          // Check to make sure positions havent
+                        m_nextGrid[r + 1][c - 1].type == ParticleType::WATER) { // already been overwritten in the next grid
+                        m_nextGrid[r + 1][c - 1] = m_grid[r][c]; // Copy sand data into water on next grid
+                        m_nextGrid[r][c] = m_grid[r + 1][c - 1]; // Copy water data into sand on next grid
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+}
 
 void World::updateSandWet(int r, int c){} // TODO: FILL
 

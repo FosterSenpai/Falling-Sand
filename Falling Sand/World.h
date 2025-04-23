@@ -15,6 +15,32 @@
 #include <vector>
 #include "Particle.h"
 
+/**
+ * @brief Struct to hold information about all the neighbors of a particle.
+ */
+struct NeighborhoodInfo {
+    // Availability in the next grid (m_nextGrid)
+    bool canMoveUp = false;
+    bool canMoveDown = false;
+    bool canMoveLeft = false;
+    bool canMoveRight = false;
+    bool canMoveDiagUL = false; // Up-Left
+    bool canMoveDiagUR = false; // Up-Right
+    bool canMoveDiagDL = false; // Down-Left
+    bool canMoveDiagDR = false; // Down-Right
+
+    // Initial types from the current grid (m_grid)
+	// Default to a solid type for safety if accessors fail TODO: Make boundary type and use that
+    ParticleType typeAbove = ParticleType::DIRT;
+    ParticleType typeBelow = ParticleType::DIRT;
+    ParticleType typeLeft = ParticleType::DIRT;
+    ParticleType typeRight = ParticleType::DIRT;
+    ParticleType typeDiagUL = ParticleType::DIRT;
+    ParticleType typeDiagUR = ParticleType::DIRT;
+    ParticleType typeDiagDL = ParticleType::DIRT;
+    ParticleType typeDiagDR = ParticleType::DIRT;
+};
+
 class World
 {
 public:
@@ -87,7 +113,7 @@ private:
     int m_cols;
 
 	// **=== Private Methods ===**
-    // -- Check Helper Methods --
+    // -- Helper Methods --
 
     /**
      * @brief Checks if the given row and column indices are within the bounds of the grid.
@@ -96,6 +122,32 @@ private:
      * @return True if the indices are within bounds, false otherwise.
      */
     bool isInBounds(int r, int c) const;
+
+    /**
+     * @brief Checks if the target cell is empty in the grid being built for the next frame (m_nextGrid).
+     * @param r_target The target row index to check.
+     * @param c_target The target column index to check.
+     * @return True if the cell is within bounds and empty in m_nextGrid, false otherwise.
+     */
+    bool isNextGridCellEmpty(int r_target, int c_target) const;
+
+    /**
+	 * @brief Gets the neighborhood information for a particle at the specified row and column.
+	 * @param r The row index of the particle.
+	 * @param c The column index of the particle.
+	 * @return A NeighborhoodInfo struct containing information about the surrounding particles.
+     */
+    NeighborhoodInfo getNeighborhoodInfo(int r, int c) const; // <-- Add declaration
+
+    /**
+     * @brief Gets the type of the particle at a relative offset (dr, dc) from (r, c).
+     * @param r The current particle's row.
+     * @param c The current particle's column.
+     * @param dr The row offset (e.g., 1 for below, -1 for above, 0 for same row).
+     * @param dc The column offset (e.g., 1 for right, -1 for left, 0 for same column).
+     * @return The ParticleType of the neighbor, or a default boundary type if out of bounds.
+     */
+    ParticleType getNeighborType(int r, int c, int dr, int dc) const;
 
     // -- Main Private Methods --
 
