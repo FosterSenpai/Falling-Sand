@@ -47,7 +47,7 @@ private:
 
     // -- Timing & FPS --
     sf::Clock clock;
-    float lastTimeForFPS;
+	float lastTimeForFPS; // Time since last FPS update
 
 	// -- Grid Variables --
     sf::VertexArray gridVertices; // The vertex array of the grid.
