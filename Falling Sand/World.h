@@ -39,6 +39,10 @@ public:
      * 
 	 * This is the main simulation function. Handles the double buffering of the grid, updating the next grid
 	 * and then swapping it with the main grid.
+     * 
+     * TODO:
+     * 
+	 * Implement alternating sweep direction for reading the grid, will help with directional bias. (HARD)
      */
     void update();
     
