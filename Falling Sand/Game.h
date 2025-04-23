@@ -36,30 +36,30 @@ public:
 
 private:
 	// **=== Private Members ===**
-	sf::RenderWindow window; // The main window for rendering
-	World world;             // The world object containing the grid of particles
+	sf::RenderWindow m_window; // The main window for rendering
+	World m_world;             // The world object containing the grid of particles
 
 	// **=== Game State & Settings ===**
-    bool isRunning;
-    int brushSize;
-    ParticleType brushType;
+    bool m_isRunning;
+    int m_brushSize;
+    ParticleType m_brushType;
 	// TODO: Make the randomness of the brush placement a 'density' setting
 
     // -- Timing & FPS --
-    sf::Clock clock;
-	float lastTimeForFPS; // Time since last FPS update
+    sf::Clock m_clock;
+	float m_lastTimeForFPS; // Time since last FPS update
 
 	// -- Grid Variables --
-    sf::VertexArray gridVertices; // The vertex array of the grid.
-    float cellWidth;
-    unsigned int windowWidth;
-    unsigned int windowHeight;
-    int gridCols; // Width / cellWidth
-    int gridRows; // height / cellWidth
+    sf::VertexArray m_gridVertices; // The vertex array of the grid.
+    float m_cellWidth;
+    unsigned int m_windowWidth;
+    unsigned int m_windowHeight;
+    int m_gridCols; // Width / cellWidth
+    int m_gridRows; // height / cellWidth
 
     // -- UI --
-    sf::Font font;
-    sf::Text uiText;
+    sf::Font m_font;
+    sf::Text m_uiText;
 
 	// **=== Private Methods ===**
     

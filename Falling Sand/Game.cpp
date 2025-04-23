@@ -13,22 +13,22 @@
 Game::Game() :
 
     // --- Initialize constants and calculate derived values ---
-    windowWidth(1280),
-    windowHeight(720),
-    cellWidth(5.0f),
-    gridCols(static_cast<int>(windowWidth / cellWidth)),
-    gridRows(static_cast<int>(windowHeight / cellWidth)),
+    m_windowWidth(1280),
+    m_windowHeight(720),
+    m_cellWidth(5.0f),
+    m_gridCols(static_cast<int>(m_windowWidth / m_cellWidth)),
+    m_gridRows(static_cast<int>(m_windowHeight / m_cellWidth)),
 
     // --- Initialize World ---
-    world(gridRows, gridCols), // Construct world with calculated dimensions
+    m_world(m_gridRows, m_gridCols), // Construct world with calculated dimensions
 
     // --- Initialize other members ---
-    isRunning(true),
-    lastTimeForFPS(0.f),
+    m_isRunning(true),
+    m_lastTimeForFPS(0.f),
 
     // --- UI ---
-    font(),
-    uiText(font)
+    m_font(),
+    m_uiText(m_font)
 {
     // Seed random number generator
     srand(static_cast<unsigned int>(time(0)));
@@ -39,39 +39,39 @@ Game::Game() :
     }
     catch (const std::runtime_error& e) {
         std::cerr << "Error loading resources: " << e.what() << std::endl;
-        isRunning = false;
+        m_isRunning = false;
         return; // Stop initialization if resources failed
     }
     setupInitialState();
 
-    std::cout << "Game Initialized: " << gridCols << "x" << gridRows << " grid." << std::endl;
+    std::cout << "Game Initialized: " << m_gridCols << "x" << m_gridRows << " grid." << std::endl;
 }
 
 // --- Setup Helpers (Called in constructor) ----
 
 void Game::loadResources() {
-    if (!font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
+    if (!m_font.openFromFile("PixelDigivolveItalic-dV8R.ttf")) {
         throw std::runtime_error("Failed to load font: PixelDigivolveItalic-dV8R.ttf");
     }
 
     // Setup UI text object properties
-    uiText.setFont(font);
-    uiText.setCharacterSize(20);
-    uiText.setFillColor(sf::Color(80, 80, 80));
-    uiText.setPosition({ 10.f, 10.f });
+    m_uiText.setFont(m_font);
+    m_uiText.setCharacterSize(20);
+    m_uiText.setFillColor(sf::Color(80, 80, 80));
+    m_uiText.setPosition({ 10.f, 10.f });
 }
 
 void Game::setupInitialState() {
     // Set initial brush settings
-    brushSize = 5;
-    brushType = ParticleType::SAND;
+    m_brushSize = 5;
+    m_brushType = ParticleType::SAND;
 
     // Initialize the vertex array for rendering the grid
-    gridVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
+    m_gridVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
 
     // Create the SFML window
-    window.create(sf::VideoMode({ windowWidth, windowHeight }), "Falling Sand OOP");
-    window.setFramerateLimit(60); // Limit FPS
+    m_window.create(sf::VideoMode({ m_windowWidth, m_windowHeight }), "Falling Sand OOP");
+    m_window.setFramerateLimit(60); // Limit FPS
 
     // Set initial UI text
 	updateUIText(); // Make sure to call this after loading resources for font
@@ -79,18 +79,17 @@ void Game::setupInitialState() {
 
 // **=== Main Public Methods ===**
 
-void Game::run()
-{
-    while (window.isOpen() && isRunning)
+void Game::run() {
+    while (m_window.isOpen() && m_isRunning)
     {
         // --- Timing & FPS calculation --
-        float currentTime = clock.getElapsedTime().asSeconds();
-		float deltaTime = (lastTimeForFPS > 0.f) ? (currentTime - lastTimeForFPS) : 0.f;
-		lastTimeForFPS = currentTime;
+        float currentTime = m_clock.getElapsedTime().asSeconds();
+		float deltaTime = (m_lastTimeForFPS > 0.f) ? (currentTime - m_lastTimeForFPS) : 0.f;
+		m_lastTimeForFPS = currentTime;
 		float fps = (deltaTime > 0.f) ? (1.f / deltaTime) : 0.f;
 
 		// Update window title with FPS
-        window.setTitle("Falling Sand | FPS: " + std::to_string(static_cast<int>(fps)));
+        m_window.setTitle("Falling Sand | FPS: " + std::to_string(static_cast<int>(fps)));
 
         // **=== Game Loop Phases ===**
         
@@ -110,7 +109,53 @@ void Game::run()
 
 // **=== Private Methods ===**
 
-void Game::processEvents() { /* Implementation... */ }
+void Game::processEvents() {
+    // Poll for all pending events accumulated since the last loop iteration
+    while (const std::optional event = m_window.pollEvent())
+    {
+		// - Window 'x' button -
+        if (event->is<sf::Event::Closed>()) {
+            m_window.close();
+            m_isRunning = false;
+        }
+
+        // **=== Key Press Event ===**
+        // Check if the event is a key being pressed down (discrete event, not hold)
+        if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
+
+            // **=== Window/App Controls ===**
+            // Check if the Escape key was pressed
+            if (keyPressed->scancode == sf::Keyboard::Scan::Escape) {
+				// Close Window TODO: Turn this into a menu
+                m_window.close();
+                m_isRunning = false;
+            }
+
+            // **=== Brush Settings Adjustment ===**
+
+			// -- Adjust Brush Size --
+            if (keyPressed->scancode == sf::Keyboard::Scan::Hyphen) { // Decrease brush size key
+                if (m_brushSize > 1) { // Ensure size doesn't go below 1
+                    m_brushSize--;
+                }
+            }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Equal) { // Increase brush size key (often '+' requires shift)
+                if (m_brushSize < 50) { // Limit maximum brush size
+                    m_brushSize++;
+                }
+            }
+
+            // -- Adjust Brush Particle Type --
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num0) { m_brushType = ParticleType::EMPTY; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num1) { m_brushType = ParticleType::SAND; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num2) { m_brushType = ParticleType::DIRT; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num3) { m_brushType = ParticleType::WATER; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num4) { m_brushType = ParticleType::SILT; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num5) { m_brushType = ParticleType::OIL; }
+        }
+    }
+}
+
 void Game::handleRealtimeInput() { /* Implementation... */ }
 void Game::placeParticles(int mouseGridX, int mouseGridY) { /* Implementation... */ }
 void Game::update() { /* Implementation... */ }
