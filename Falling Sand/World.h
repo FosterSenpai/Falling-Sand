@@ -3,223 +3,200 @@
 // File:        World.h
 // Author:      Foster Rae
 // Date Created:2025-04-23
-// Last Update: 2025-04-23
-// Version:     1.0
-// Description: Header file for the World class. 
-//              Defines the World class, handles particle logic and interaction
-//              with the grid (Setting particles, accessing grid). Handles
-//              particle and grid updates.
+// Last Update: 2025-04-25 // Updated Date
+// Version:     1.1 // Updated Version
+// Description: Header file for the World class.
+//              Manages the grid of Elements and handles simulation updates,
+//              providing interaction methods for Elements.
 // ============================================================================
 
-// TODO: Create image loader that loads images and converts each pixel into nearest color particle
-
 #pragma once
+
 #include <vector>
-#include "Particle.h"
+#include <memory>       // For std::unique_ptr
+#include "Particle.h"    // For ParticleType enum
+#include "Element.h"     // Include base Element class
 
-/**
- * @brief Struct to hold information about all the neighbors of a particle.
- */
-struct NeighborhoodInfo {
-    // Availability in the next grid (m_nextGrid)
-    bool canMoveUp = false;
-    bool canMoveDown = false;
-    bool canMoveLeft = false;
-    bool canMoveRight = false;
-    bool canMoveDiagUL = false; // Up-Left
-    bool canMoveDiagUR = false; // Up-Right
-    bool canMoveDiagDL = false; // Down-Left
-    bool canMoveDiagDR = false; // Down-Right
+// Forward declare Element (already included, but good practice)
+class Element;
 
-    // Initial types from the current grid (m_grid)
-	// Default to a solid type for safety if accessors fail TODO: Make boundary type and use that
-    ParticleType typeAbove = ParticleType::DIRT;
-    ParticleType typeBelow = ParticleType::DIRT;
-    ParticleType typeLeft = ParticleType::DIRT;
-    ParticleType typeRight = ParticleType::DIRT;
-    ParticleType typeDiagUL = ParticleType::DIRT;
-    ParticleType typeDiagUR = ParticleType::DIRT;
-    ParticleType typeDiagDL = ParticleType::DIRT;
-    ParticleType typeDiagDR = ParticleType::DIRT;
+// Struct to hold particle placement requests
+struct PlacementRequest {
+    int r;
+    int c;
+    ParticleType type;
 };
 
 class World
 {
 public:
-	// **=== Constructors & Destructors ===**
-
-    /**
-	 * @brief Constructs a World object with a grid of the specified dimensions.
-	 * @param numRows The number of rows in the grid.
-	 * @param numCols The number of columns in the grid.
-     */
+    // **=== Constructors & Destructors ===**
     World(int numRows, int numCols);
+    // Default destructor is likely fine as unique_ptr handles cleanup
 
-	// **=== Public Methods ===**
-    
-    // -- Main Methods --
-    
+    // **=== Public Methods ===**
+
+    // -- Main Simulation --
     /**
-	 * @brief Advances the simulation state by one frame/tick. Processes physics and interactions 
-     * for all particles in the grid and updates them.
-     * 
-     * Notes:
-     * 
-	 * This is the main simulation function. Handles the double buffering of the grid, updating the next grid
-	 * and then swapping it with the main grid.
-     * 
-     * TODO:
-     * 
-	 * Implement alternating sweep direction for reading the grid, will help with directional bias. (HARD)
+     * @brief Advances the simulation state by one frame/tick.
+     * Manages the update cycle for all elements in the grid.
      */
     void update();
-    
-    // -- Setters --
 
     /**
-	 * @brief Set the particle at the specified row and column to a new type.
-	 * @param r The row index of the particle to set.
-	 * @param c The column index of the particle to set.
-	 * @param type The new particle type to set.
+	 * @brief Handles the placement of elements in the grid.
+	 * @param r Row index for placement.
+	 * @param c Column index for placement.
+	 * @param type The ParticleType of the element to place.
      */
-    void setParticle(int r, int c, ParticleType type);
-   
+    void requestPlacement(int r, int c, ParticleType type);
+
+    // -- Element Creation --
+    /**
+     * @brief Creates and places a new element of the specified type at (r, c)
+     * in the main grid (m_grid), replacing any existing element.
+     * @param r The row index.
+     * @param c The column index.
+     * @param type The ParticleType of the element to create.
+     */
+    void setElementByType(int r, int c, ParticleType type);
+
     // -- Getters --
+    /**
+     * @brief Gets a raw pointer to the element in the current grid (m_grid).
+     * Returns nullptr if coordinates are out of bounds or cell is empty.
+     * Pointer is for observation, ownership remains with the World.
+     * @param r The row index.
+     * @param c The column index.
+     * @return Element* Pointer to the element, or nullptr.
+     */
+    Element* getElement(int r, int c) const;
+
+     /**
+     * @brief Gets a raw pointer to the element in the next grid (m_nextGrid).
+     * Used for checking state during updates before it's finalized.
+     * Returns nullptr if coordinates are out of bounds or cell is empty.
+     * Pointer is for observation, ownership remains with the World.
+     * @param r The row index.
+     * @param c The column index.
+     * @return Element* Pointer to the element, or nullptr.
+     */
+    Element* getElementFromNext(int r, int c) const;
 
     /**
-	 * @brief Get the particle at the specified row and column.
-	 * @param r The row index of the particle.
-	 * @param c The column index of the particle.
+     * @brief Gets the ParticleType of the element at (r, c) in the current grid.
+     * Convenience function. Returns EMPTY if out of bounds or cell is empty.
+     * @param r The row index.
+     * @param c The column index.
+     * @return ParticleType The type of the element.
      */
-    Particle getParticle(int r, int c) const;
-    /**
-	 * @brief Get the current state of the grid.
-	 * @return A reference to the grid containing particles.
-     */
-    const std::vector<std::vector<Particle>>& getGridState() const;
+    ParticleType getElementType(int r, int c) const;
 
-    // Get the number of rows in the grid
-	int getRows() const; 
-    // Get the number of columns in the grid
-	int getCols() const; 
+    /**
+     * @brief Gets the current state of the simulation grid (m_grid).
+     * @return Const reference to the grid of unique element pointers.
+     */
+    const std::vector<std::vector<std::unique_ptr<Element>>>& getGridState() const;
+
+    // Get grid dimensions
+    int getRows() const;
+    int getCols() const;
+
+
+    // **=== Methods for Element Interaction (used by Element::update) ===**
+
+    /**
+     * @brief Checks if the given coordinates are within the grid boundaries.
+     * @param r The row index.
+     * @param c The column index.
+     * @return True if within bounds, false otherwise.
+     */
+    bool isWithinBounds(int r, int c) const;
+
+    /**
+     * @brief Attempts to move/swap element from (r_from, c_from) to (r_to, c_to).
+     * Checks if the target cell in m_nextGrid is available or displaceable,
+     * and if so, performs the move/swap atomically for this tick.
+     * @return true if the move/swap was successfully performed, false otherwise.
+     */
+    bool tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to);
+
+    /**
+     * @brief Moves the element from (r_from, c_from) in m_grid to (r_to, c_to)
+     * in m_nextGrid. The original cell in m_nextGrid is implicitly left empty
+     * unless something else moves there. Ownership is transferred via std::move.
+     * Precondition: Target cell in m_nextGrid should be empty or prepared.
+     * @param r_from Source row index.
+     * @param c_from Source column index.
+     * @param r_to Target row index.
+     * @param c_to Target column index.
+     */
+    void moveElementToNext(int r_from, int c_from, int r_to, int c_to);
+
+    /**
+     * @brief Swaps the elements currently at (r1, c1) and (r2, c2) in m_grid,
+     * placing them into the corresponding positions in m_nextGrid.
+     * Handles ownership transfer via std::move.
+     * @param r1 Row index of the first element.
+     * @param c1 Column index of the first element.
+     * @param r2 Row index of the second element.
+     * @param c2 Column index of the second element.
+     */
+    void swapElementsInNext(int r1, int c1, int r2, int c2);
+
+    /**
+     * @brief Directly sets the element pointer for a cell in the next grid (m_nextGrid).
+     * Takes ownership of the provided element pointer. Used internally by move/swap.
+     * @param r The row index.
+     * @param c The column index.
+     * @param element A unique_ptr to the element to place.
+     */
+     void setNextElement(int r, int c, std::unique_ptr<Element> element);
+
+    /**
+     * @brief Clears a cell in the next grid (m_nextGrid), setting it to nullptr.
+     * @param r The row index.
+     * @param c The column index.
+     */
+    void clearNextGridCell(int r, int c);
+
+    // **=== Element Factory (Example) ===**
+    /**
+     * @brief Creates a unique_ptr to a specific Element subclass based on type.
+     * (Could be implemented in World.cpp)
+     * @param type The ParticleType to create.
+     * @return std::unique_ptr<Element> Pointer to the new element, or nullptr if type is invalid/EMPTY.
+     */
+    std::unique_ptr<Element> createElementByType(ParticleType type);
 
 
 private:
-	// **=== Member data ===**
-    // - Grids -
-    std::vector<std::vector<Particle>> m_grid;      // Main grid
-    std::vector<std::vector<Particle>> m_nextGrid;  // Grid to calculate into and swap with
+    // **=== Member data ===**
+    // Grids now store unique pointers to Element objects
+    std::vector<std::vector<std::unique_ptr<Element>>> m_grid;      // Current state grid
+    std::vector<std::vector<std::unique_ptr<Element>>> m_nextGrid;  // Grid for calculating next state
+	std::vector<PlacementRequest> m_placementRequests;              // Requests for element placements
 
-    // - Dimensions - 
+    // Dimensions
     int m_rows;
     int m_cols;
 
-	// **=== Private Methods ===**
-    // -- Helper Methods --
+    // -- Flags --
+    bool m_sweepRight = true; // Tracks the column update direction
+
+    void wakeNeighbors(int r, int c);
+
+    // **=== Private Methods ===**
+
+    // Remove or refactor old private helpers like isNextGridCellEmpty, getNeighborType,
+    // updateSand, updateWater, etc. The logic moves to Element classes.
+    // The updateParticle dispatcher might remain but call element->update().
 
     /**
-     * @brief Checks if the given row and column indices are within the bounds of the grid.
-     * @param r The row index to check.
-     * @param c The column index to check.
-     * @return True if the indices are within bounds, false otherwise.
+     * @brief Dispatches the update logic to the element at the given coordinates.
+     * Reads the element from m_grid, checks flags (awake, updated), calls element->update().
+     * @param r The row index of the particle to potentially update.
+     * @param c The column index of the particle to potentially update.
      */
-    bool isInBounds(int r, int c) const;
-
-    /**
-     * @brief Checks if the target cell is empty in the grid being built for the next frame (m_nextGrid).
-     * @param r_target The target row index to check.
-     * @param c_target The target column index to check.
-     * @return True if the cell is within bounds and empty in m_nextGrid, false otherwise.
-     */
-    bool isNextGridCellEmpty(int r_target, int c_target) const;
-
-    /**
-	 * @brief Gets the neighborhood information for a particle at the specified row and column.
-	 * @param r The row index of the particle.
-	 * @param c The column index of the particle.
-	 * @return A NeighborhoodInfo struct containing information about the surrounding particles.
-     */
-    NeighborhoodInfo getNeighborhoodInfo(int r, int c) const; // <-- Add declaration
-
-    /**
-     * @brief Gets the type of the particle at a relative offset (dr, dc) from (r, c).
-     * @param r The current particle's row.
-     * @param c The current particle's column.
-     * @param dr The row offset (e.g., 1 for below, -1 for above, 0 for same row).
-     * @param dc The column offset (e.g., 1 for right, -1 for left, 0 for same column).
-     * @return The ParticleType of the neighbor, or a default boundary type if out of bounds.
-     */
-    ParticleType getNeighborType(int r, int c, int dr, int dc) const;
-
-    // -- Main Private Methods --
-
-    /**
-	 * @brief Dispatches the update logic to the correct particle-specific update function based on the particle type at the given coordinates.
-	 * @param r The row index of the particle to potentially update.
-	 * @param c The column index of the particle to potentially update.
-     * 
-	 * Notes: 
-     * 
-     * This function reads the particle type from the current state grid (m_grid)
-	 * and calls the corresponding private update helper (e.g., updateSand, updateWater).
-     * 
-     * It acts as a central router within the main World::update() loop.
-     * 
-     * The actual state changes are performed within the specific helper functions,
-     * writing to m_nextGrid.
-     */
-    void updateParticle(int r, int c);
-
-    // **=== Particle Logic ===**
-
-    /**
-     * @brief Handles physics for Sand particles: falling due to gravity, settling diagonally, and displacing liquids.
-     * @param r The row index of the sand particle to update.
-     * @param c The column index of the sand particle to update.
-     */
-    void updateSand(int r, int c);
-    /**
-     * @brief Handles physics for Wet Sand particles, including movement similar to sand and a chance to dry out.
-     * @param r The row index of the wet sand particle to update.
-     * @param c The column index of the wet sand particle to update.
-     * 
-     * TODO : Refine movement logic (e.g., make it 'stickier' than dry sand?), just holds a darker color for now.
-     */
-    void updateSandWet(int r, int c);
-    /**
-     * @brief Handles logic for Dirt particles, mainly static, grows grass on exposed surfaces.
-     * @param r The row index of the dirt particle to update.
-     * @param c The column index of the dirt particle to update.
-     * 
-	 * TODO : Add logic for dirt to fall from the bottom of a structure for a few seconds, then stay static.  
-	 * Maybe add vines growing from the bottom of exposed dirt?
-     */
-    void updateDirt(int r, int c);
-    /**
-	 * @brief Handles logic for Grass particles, mainly static, turns into dirt if covered.
-	 * @param r The row index of the grass particle to update.
-	 * @param c The column index of the grass particle to update.
-     */
-    void updateGrass(int r, int c);
-    /**
-	 * @brief Handles logic for Water particles, falls, and spreads, other particles can displace it.
-	 * @param r The row index of the water particle to update.
-	 * @param c The column index of the water particle to update.
-     */
-    void updateWater(int r, int c);
-    /**
-	 * @brief Handles logic for Silt particles, which fall and can displace water. Moves down only.
-	 * @param r The row index of the silt particle to update.
-	 * @param c The column index of the silt particle to update.
-     * 
-	 * TODO : A bit boring, make it more interesting?
-     */
-    void updateSilt(int r, int c);
-    /**
-	 * @brief Handles logic for Oil particles, which can move diagonally and displace water. Like water but more viscous.
-	 * @param r The row index of the oil particle to update.
-	 * @param c The column index of the oil particle to update.
-     */
-    void updateOil(int r, int c);
+    void updateElement(int r, int c); // Renamed from updateParticle
 };
-

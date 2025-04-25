@@ -4,7 +4,7 @@
 // Author:      Foster Rae
 // Date Created:2025-04-23
 // Last Update: 2025-04-23
-// Version:     1.0
+// Version:     1.6
 // Description: Header file for the Game class. 
 //              Handles the main game loop, window management, input handling,
 //              UI display and rendering.

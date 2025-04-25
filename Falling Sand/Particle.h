@@ -10,6 +10,7 @@ enum class ParticleType {
     WATER,
     SILT,
     OIL,
+    STEAM
 };
 
 struct Particle {

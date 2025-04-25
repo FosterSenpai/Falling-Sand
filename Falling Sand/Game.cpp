@@ -15,7 +15,7 @@ Game::Game() :
     // --- Initialize constants and calculate derived values ---
     m_windowWidth(1280),
     m_windowHeight(720),
-    m_cellWidth(3.0f),
+    m_cellWidth(4.0f),
     m_gridCols(static_cast<int>(m_windowWidth / m_cellWidth)),
     m_gridRows(static_cast<int>(m_windowHeight / m_cellWidth)),
 
@@ -189,7 +189,7 @@ void Game::placeParticles(int mouseGridX, int mouseGridY) {
 
 
 				if (row >= 0 && row < m_gridRows && col >= 0 && col < m_gridCols) { // If within bounds
-					m_world.setParticle(row, col, m_brushType);                     // Set Particle in world
+					m_world.requestPlacement(row, col, m_brushType); // Request placement in the world
 				}
 			}
 			// TODO : Could extend this logic here for different shaped brushes
@@ -235,22 +235,25 @@ void Game::prepareVertices() {
     // Clear the previous frame vertices
     m_gridVertices.clear();
 
-    // Get ref to current grid
+    // Get ref to current grid (which now contains unique_ptrs)
     const auto& currentGrid = m_world.getGridState();
 
     // Iterate through all cells in grid
     for (int r = 0; r < m_gridRows; ++r) {
         for (int c = 0; c < m_gridCols; ++c) {
-        
-            // Get current cells particle
-            const Particle& particle = currentGrid[r][c];
 
-            // Only draw non empty particles TODO:: May need to change later when empty has more data (heat etc)
-            if (particle.type != ParticleType::EMPTY) {
-                // Get color for the particle
-                sf::Color particleColor = Utils::getColorForType(particle.type);
+            // Get the unique_ptr reference from the grid
+            const std::unique_ptr<Element>& elementPtr = currentGrid[r][c];
 
-                // Calculate the screen coordinates of the cell's corners
+            // Check if the pointer is valid (not nullptr)
+            if (elementPtr) {
+                // Get the raw pointer to use (doesn't affect ownership)
+                Element* element = elementPtr.get();
+
+                // Get color using the element's virtual method
+                sf::Color particleColor = element->getColor();
+
+                // Calculate the screen coordinates of the cell's corners (same as before)
                 float left = static_cast<float>(c) * m_cellWidth;
                 float top = static_cast<float>(r) * m_cellWidth;
                 float right = left + m_cellWidth;
@@ -261,16 +264,16 @@ void Game::prepareVertices() {
                 sf::Vertex bottomLeft(sf::Vector2f(left, bottom), particleColor);
                 sf::Vertex bottomRight(sf::Vector2f(right, bottom), particleColor);
 
-                // Drawing 2 tris (6 Vertices) for each quad (cell/pixel/particle)
-                // -- Tri 1 --
+                // Append vertices for the two triangles (same as before)
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(topRight);
                 m_gridVertices.append(bottomRight);
-                // -- Tri 2 __
+
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(bottomRight);
                 m_gridVertices.append(bottomLeft);
             }
+            // If elementPtr is nullptr, we just skip rendering this cell (it's empty)
         }
     }
 }

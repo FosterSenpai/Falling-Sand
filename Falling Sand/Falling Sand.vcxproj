@@ -135,16 +135,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DirtElement.cpp" />
+    <ClCompile Include="DynamicSolid.cpp" />
+    <ClCompile Include="Element.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="Gas.cpp" />
+    <ClCompile Include="GrassElement.cpp" />
+    <ClCompile Include="Liquid.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="SFML Base.cpp" />
+    <ClCompile Include="OLD.cpp" />
+    <ClCompile Include="SandElement.cpp" />
+    <ClCompile Include="Solid.cpp" />
+    <ClCompile Include="StaticSolid.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="WaterElement.cpp" />
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DirtElement.h" />
+    <ClInclude Include="DynamicSolid.h" />
+    <ClInclude Include="Element.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Gas.h" />
+    <ClInclude Include="GrassElement.h" />
+    <ClInclude Include="Liquid.h" />
     <ClInclude Include="Particle.h" />
+    <ClInclude Include="SandElement.h" />
+    <ClInclude Include="Solid.h" />
+    <ClInclude Include="StaticSolid.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="WaterElement.h" />
     <ClInclude Include="World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

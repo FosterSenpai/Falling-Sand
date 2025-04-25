@@ -13,28 +13,82 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Particles">
+      <UniqueIdentifier>{da9c831e-5b2f-4dda-862c-2de4edc189d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Particles">
+      <UniqueIdentifier>{2d9e5c75-9e63-411d-87a5-1426c92fb7d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\States">
+      <UniqueIdentifier>{c40f9f5c-fbe2-4e49-9b3e-4b887648d00a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\Liquids">
+      <UniqueIdentifier>{206e6e1e-5c31-4260-8112-ad4c2e20e827}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\Solids">
+      <UniqueIdentifier>{b6e415d5-25ea-41c8-b7ec-7862219e1fd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\Gasses">
+      <UniqueIdentifier>{811bd531-751f-402d-a9fe-c6a1061a13a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\Solids\Dynamic Solids">
+      <UniqueIdentifier>{dd1bc93a-3e32-4866-9990-4c285b0ffba1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particles\Solids\Static Solids">
+      <UniqueIdentifier>{fa336a90-6383-4dd9-9ee4-397c32ca5639}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Components">
+      <UniqueIdentifier>{3f30e586-1554-4117-a3fd-727a1010204d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SFML Base.cpp">
+    <ClCompile Include="OLD.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="World.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Element.cpp">
+      <Filter>Source Files\Particles</Filter>
     </ClCompile>
-    <ClCompile Include="Utils.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Gas.cpp">
+      <Filter>Source Files\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="Liquid.cpp">
+      <Filter>Source Files\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="Solid.cpp">
+      <Filter>Source Files\Particles</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Components</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>Source Files\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>Source Files\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Source Files\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="DynamicSolid.cpp">
+      <Filter>Source Files\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticSolid.cpp">
+      <Filter>Source Files\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="SandElement.cpp">
+      <Filter>Source Files\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="DirtElement.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GrassElement.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WaterElement.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Particle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="World.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,6 +96,39 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Element.h">
+      <Filter>Header Files\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="Gas.h">
+      <Filter>Header Files\Particles\States</Filter>
+    </ClInclude>
+    <ClInclude Include="Liquid.h">
+      <Filter>Header Files\Particles\States</Filter>
+    </ClInclude>
+    <ClInclude Include="Solid.h">
+      <Filter>Header Files\Particles\States</Filter>
+    </ClInclude>
+    <ClInclude Include="Particle.h">
+      <Filter>Header Files\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamicSolid.h">
+      <Filter>Header Files\Particles\Solids</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticSolid.h">
+      <Filter>Header Files\Particles\Solids</Filter>
+    </ClInclude>
+    <ClInclude Include="SandElement.h">
+      <Filter>Header Files\Particles\Solids\Dynamic Solids</Filter>
+    </ClInclude>
+    <ClInclude Include="DirtElement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GrassElement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WaterElement.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
