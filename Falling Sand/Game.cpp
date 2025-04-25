@@ -15,7 +15,7 @@ Game::Game() :
     // --- Initialize constants and calculate derived values ---
     m_windowWidth(1280),
     m_windowHeight(720),
-    m_cellWidth(5.0f),
+    m_cellWidth(3.0f),
     m_gridCols(static_cast<int>(m_windowWidth / m_cellWidth)),
     m_gridRows(static_cast<int>(m_windowHeight / m_cellWidth)),
 
@@ -70,7 +70,8 @@ void Game::setupInitialState() {
     m_gridVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
 
     // Create the SFML window
-    m_window.create(sf::VideoMode({ m_windowWidth, m_windowHeight }), "Falling Sand OOP");
+    auto windowStyle = sf::Style::Titlebar | sf::Style::Close;
+    m_window.create(sf::VideoMode({ m_windowWidth, m_windowHeight }), "Falling Sand OOP", windowStyle);
     m_window.setFramerateLimit(60); // Limit FPS
 
     // Set initial UI text
@@ -152,6 +153,8 @@ void Game::processEvents() {
             if (keyPressed->scancode == sf::Keyboard::Scan::Num3) { m_brushType = ParticleType::WATER; }
             if (keyPressed->scancode == sf::Keyboard::Scan::Num4) { m_brushType = ParticleType::SILT; }
             if (keyPressed->scancode == sf::Keyboard::Scan::Num5) { m_brushType = ParticleType::OIL; }
+            if (keyPressed->scancode == sf::Keyboard::Scan::Num6) { m_brushType = ParticleType::SANDWET; }
+
         }
     }
 }

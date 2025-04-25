@@ -285,7 +285,7 @@ void World::updateSand(int r, int c)
     }
 }
 
-void World::updateSandWet(int r, int c){} // TODO: FILL
+void World::updateSandWet(int r, int c) { updateSand(r, c); } // TODO: FILL
 
 void World::updateDirt(int r, int c){} // TODO: FILL
 

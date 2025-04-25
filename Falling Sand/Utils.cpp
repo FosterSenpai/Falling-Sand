@@ -34,7 +34,8 @@ std::string Utils::getNameForType(ParticleType type)
     return particleTypeName;
 }
 
-int getPlacementDensity(ParticleType type) {
+int Utils::getDensityForType(ParticleType type)
+{
     switch (type) {
         // Solids / Granular - place quite densely
     case ParticleType::SAND:    return 85;
