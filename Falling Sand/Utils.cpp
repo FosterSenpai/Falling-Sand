@@ -17,7 +17,7 @@ sf::Color Utils::getColorForType(ParticleType type)
     }
 }
 
-std::string Utils::particleTypeToString(ParticleType type)
+std::string Utils::getNameForType(ParticleType type)
 {
     std::string particleTypeName;
     switch (type) {
@@ -33,3 +33,25 @@ std::string Utils::particleTypeToString(ParticleType type)
     }
     return particleTypeName;
 }
+
+int getPlacementDensity(ParticleType type) {
+    switch (type) {
+        // Solids / Granular - place quite densely
+    case ParticleType::SAND:    return 85;
+    case ParticleType::SANDWET: return 85;
+    case ParticleType::DIRT:    return 95; // Dirt might be very dense
+    case ParticleType::GRASS:   return 90;
+    case ParticleType::SILT:    return 80;
+
+        // Liquids - place less densely for a "splash" effect
+    case ParticleType::WATER:   return 40;
+    case ParticleType::OIL:     return 35;
+
+        // Eraser - always place (100%)
+    case ParticleType::EMPTY:   return 100;
+
+        // Default for unknown types
+    default:                    return 50;
+    }
+}
+

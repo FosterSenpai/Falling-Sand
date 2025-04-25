@@ -10,5 +10,7 @@ namespace Utils {
 
     sf::Color getColorForType(ParticleType type);// Gets the display color for a given particle type
 
-    std::string particleTypeToString(ParticleType type);// Converts a particle type enum to its string name (for UI)
+    std::string getNameForType(ParticleType type);// Converts a particle type enum to its string name (for UI)
+
+	int getDensityForType(ParticleType type);// Gets the density of a particle type (for brush density)
 }

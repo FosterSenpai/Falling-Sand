@@ -172,7 +172,7 @@ void Game::handleRealtimeInput() {
 void Game::placeParticles(int mouseGridX, int mouseGridY) {
     // Calculate extent of brush (Radius)
     int extent = static_cast<int>(std::floor(static_cast<int>(m_brushSize) / 2.0f));
-    const int densityPercent = 20; // % Chance of a particle being placed within the brush area
+    const int densityPercent = Utils::getDensityForType(m_brushType); // % Chance of a particle being placed within the brush area
 
     // Iterate through region around the mouse position on the grid
 	for (int i = -extent; i <= extent; ++i) {     // Iterate rows within extent
@@ -217,7 +217,7 @@ void Game::render() {
 
 void Game::updateUIText() {
     // Get string for ui from brush type
-	std::string particleTypeName = Utils::particleTypeToString(m_brushType);
+	std::string particleTypeName = Utils::getNameForType(m_brushType);
 
 	// Text to display
     std::string displayText = "BRUSH SETTINGS:\n"
