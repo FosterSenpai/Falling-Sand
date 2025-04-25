@@ -156,9 +156,119 @@ void Game::processEvents() {
     }
 }
 
-void Game::handleRealtimeInput() { /* Implementation... */ }
-void Game::placeParticles(int mouseGridX, int mouseGridY) { /* Implementation... */ }
-void Game::update() { /* Implementation... */ }
-void Game::render() { /* Implementation... */ }
-void Game::updateUIText() { /* Implementation... */ }
-void Game::prepareVertices() { /* Implementation... */ }
+void Game::handleRealtimeInput() {
+
+	// Spawn particles on mouse click
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) // LMB
+	{
+		//Get mouse position in grid coordinates
+		int mouseCol = static_cast<int>(std::floor(sf::Mouse::getPosition(m_window).x / m_cellWidth));
+		int mouseRow = static_cast<int>(std::floor(sf::Mouse::getPosition(m_window).y / m_cellWidth));
+		// Place particles based on the current brush settings
+		placeParticles(mouseCol, mouseRow);
+    }
+}
+
+void Game::placeParticles(int mouseGridX, int mouseGridY) {
+    // Calculate extent of brush (Radius)
+    int extent = static_cast<int>(std::floor(static_cast<int>(m_brushSize) / 2.0f));
+    const int densityPercent = 20; // % Chance of a particle being placed within the brush area
+
+    // Iterate through region around the mouse position on the grid
+	for (int i = -extent; i <= extent; ++i) {     // Iterate rows within extent
+        for (int j = -extent; j <= extent; ++j) { // Iterate cols within extent
+
+            // -- Brush Density --
+			if (rand() % 100 < densityPercent) { // Fires with a chance of densityPercent
+				// Rows/cols brush is in
+				int col = mouseGridX + j;
+				int row = mouseGridY + i;
+
+
+				if (row >= 0 && row < m_gridRows && col >= 0 && col < m_gridCols) { // If within bounds
+					m_world.setParticle(row, col, m_brushType);                     // Set Particle in world
+				}
+			}
+			// TODO : Could extend this logic here for different shaped brushes
+        }
+    }
+}
+
+void Game::update() {
+    // Advance particle sim by one step
+	m_world.update();
+    // Update the UI
+	updateUIText();
+    // TODO: FPS calc is currently in run(), could move here
+}
+
+void Game::render() {
+    // Prepare vertex array
+    prepareVertices();
+    // Clear the window
+	m_window.clear(sf::Color::White); // Background is white
+	// Draw the grid
+	m_window.draw(m_gridVertices);
+	// Draw the UI text
+	m_window.draw(m_uiText);
+	// Display the contents of the window
+    m_window.display();
+}
+
+void Game::updateUIText() {
+    // Get string for ui from brush type
+	std::string particleTypeName = Utils::particleTypeToString(m_brushType);
+
+	// Text to display
+    std::string displayText = "BRUSH SETTINGS:\n"
+        "Type: " + particleTypeName +
+        " [" + std::to_string(static_cast<int>(m_brushType)) + "]\n"
+        "Size: " + std::to_string(m_brushSize);
+
+	// Set the UI text
+    m_uiText.setString(displayText);
+}
+
+void Game::prepareVertices() {
+    // Clear the previous frame vertices
+    m_gridVertices.clear();
+
+    // Get ref to current grid
+    const auto& currentGrid = m_world.getGridState();
+
+    // Iterate through all cells in grid
+    for (int r = 0; r < m_gridRows; ++r) {
+        for (int c = 0; c < m_gridCols; ++c) {
+        
+            // Get current cells particle
+            const Particle& particle = currentGrid[r][c];
+
+            // Only draw non empty particles TODO:: May need to change later when empty has more data (heat etc)
+            if (particle.type != ParticleType::EMPTY) {
+                // Get color for the particle
+                sf::Color particleColor = Utils::getColorForType(particle.type);
+
+                // Calculate the screen coordinates of the cell's corners
+                float left = static_cast<float>(c) * m_cellWidth;
+                float top = static_cast<float>(r) * m_cellWidth;
+                float right = left + m_cellWidth;
+                float bottom = top + m_cellWidth;
+
+                sf::Vertex topLeft(sf::Vector2f(left, top), particleColor);
+                sf::Vertex topRight(sf::Vector2f(right, top), particleColor);
+                sf::Vertex bottomLeft(sf::Vector2f(left, bottom), particleColor);
+                sf::Vertex bottomRight(sf::Vector2f(right, bottom), particleColor);
+
+                // Drawing 2 tris (6 Vertices) for each quad (cell/pixel/particle)
+                // -- Tri 1 --
+                m_gridVertices.append(topLeft);
+                m_gridVertices.append(topRight);
+                m_gridVertices.append(bottomRight);
+                // -- Tri 2 __
+                m_gridVertices.append(topLeft);
+                m_gridVertices.append(bottomRight);
+                m_gridVertices.append(bottomLeft);
+            }
+        }
+    }
+}
