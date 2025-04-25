@@ -224,8 +224,7 @@ void Game::updateUIText() {
 
 	// Text to display
     std::string displayText = "BRUSH SETTINGS:\n"
-        "Type: " + particleTypeName +
-        " [" + std::to_string(static_cast<int>(m_brushType)) + "]\n"
+		"Type: " + particleTypeName + "\n" +
         "Size: " + std::to_string(m_brushSize);
 
 	// Set the UI text

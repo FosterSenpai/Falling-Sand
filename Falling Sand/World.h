@@ -11,6 +11,8 @@
 //              particle and grid updates.
 // ============================================================================
 
+// TODO: Create image loader that loads images and converts each pixel into nearest color particle
+
 #pragma once
 #include <vector>
 #include "Particle.h"
