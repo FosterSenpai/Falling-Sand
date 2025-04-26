@@ -27,7 +27,7 @@ void SandElement::update(World& world, int r, int c) {
         this->wakeUp(); // Ensure it stays awake if it moved
     }
     else {
-        this->potentiallyGoToSleep(); // Allow it to sleep if it didn't move
+        //this->potentiallyGoToSleep(); // Allow it to sleep if it didn't move
     }
 
     // TODO: Add temperature-based logic (melting checks using getMeltingPoint)

@@ -16,46 +16,27 @@
 // **=== Overridden Public Methods ===**
 
 void WaterElement::update(World& world, int r, int c) {
-    // Increment base age
+    this->wakeUp(); // Force awake
     age++;
+    bool evaporated = false;
+    bool moved = false;
 
-    bool acted = false; // Did the water do anything this tick?
-
-    // --- Evaporation ---
-    // Check temperature and attempt to evaporate first
     if (attemptEvaporation(world, r, c)) {
-        // If evaporation happened, the element was replaced in nextGrid.
-        // No further action needed for this water particle this tick.
-        // The new gas particle will mark itself updated next tick.
-        // We don't call markAsUpdated() for the original water here.
-        acted = true;
-        // No need to call wakeUp() here, evaporation handles replacement.
+        evaporated = true;
     }
 
-    // --- Flow ---
-    // Only attempt flow if not evaporated
-    if (!acted) {
-        if (attemptFlow(world, r, c)) {
-            // If flow happened, mark as acted and ensure awake
-            acted = true;
-            this->wakeUp();
+    if (!evaporated) {
+        moved = attemptFlow(world, r, c); // Store result
+        if (moved) {
+            // Wakeup handled by tryMoveOrSwap's neighbour calls
         }
     }
 
-    // TODO: Add other interactions (e.g., reacting with other elements?)
-
-    // --- Sleep & Update Mark ---
-    // Only manage sleep/mark if nothing happened that replaced the element
-    if (!acted) {
-        //this->potentiallyGoToSleep();
-    }
-    // Mark as updated regardless of action, as state was processed.
-    // Unless it evaporated, in which case it doesn't exist to mark.
-    if (!acted) { // Only mark if it didn't evaporate
+    // Mark as updated if the element still exists (wasn't evaporated)
+    if (!evaporated) {
         this->markAsUpdated();
     }
 }
-
 sf::Color WaterElement::getColor() const {
     // Water color (e.g., from Utils.cpp)
     // TODO: Add variation based on depth/neighbours later?

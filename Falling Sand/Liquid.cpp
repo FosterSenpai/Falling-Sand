@@ -30,69 +30,82 @@
  * @return true if the liquid successfully moved or swapped, false otherwise.
  */
 bool Liquid::attemptFlow(World& world, int r, int c) {
-
-    // No need to get selfDensity here anymore, tryMoveOrSwap handles comparisons internally
+    float selfDensity = this->getDensity();
 
     // --- Priority 1: Try Move/Swap Directly Below ---
-    int next_r = r + 1;
-    int next_c = c;
-    if (world.tryMoveOrSwap(r, c, next_r, next_c)) {
+    if (world.tryMoveOrSwap(r, c, r + 1, c)) {
         return true; // Moved/swapped down
     }
 
-    // --- Priority 2: Try Move/Swap Diagonals Down (Randomized Order) ---
-    int dir = (rand() % 2 == 0) ? 1 : -1; // Randomly check left (-1) or right (+1) first
-
-    for (int i = 0; i < 2; ++i) { // Check both diagonals (dir, then -dir)
-        next_r = r + 1;
-        next_c = c + dir;
-        // Only attempt move/swap into empty diagonal cells for liquids (simpler)
-        // Check original grid's diagonal target - if it was empty, try moving there
-        // Note: tryMoveOrSwap currently checks original target internally
-        if (world.tryMoveOrSwap(r, c, next_r, next_c)) {
-            // We might want to refine tryMoveOrSwap later to only allow liquids
-            // to move diagonally into EMPTY cells, not displace fluids diagonally.
-            // For now, this uses the standard tryMoveOrSwap.
-            return true; // Moved/swapped diagonally
-        }
-        dir *= -1; // Flip direction
+    // --- Priority 2: Try Move/Swap Diagonals Down ---
+    int diag_dir = (rand() % 2 == 0) ? 1 : -1; // Randomize diagonal check order
+    // Try preferred diagonal
+    if (world.tryMoveOrSwap(r, c, r + 1, c + diag_dir)) {
+        return true;
+    }
+    // Try other diagonal
+    if (world.tryMoveOrSwap(r, c, r + 1, c - diag_dir)) {
+        return true;
     }
 
-    // --- Priority 3: Try Move Horizontally (Using Dispersion Rate) ---
+    // --- Priority 3: Check Horizontal ---
+    // Find ALL potentially valid horizontal moves first, then try the closest one.
     int dispersion = this->getDispersionRate();
-    dir = (rand() % 2 == 0) ? 1 : -1; // Randomize horizontal check order
+    int best_h_move_c = c; // Target column, c means no move found yet
+    int min_dist = dispersion + 1; // Distance to closest valid spot
 
-    for (int i = 0; i < 2; ++i) { // Check both directions (dir, then -dir)
+    int horiz_dir = (rand() % 2 == 0) ? 1 : -1; // Randomize side check order
+
+    for (int i = 0; i < 2; ++i) { // Check both L/R directions
         for (int step = 1; step <= dispersion; ++step) {
-            next_r = r; // Stay on same row
-            next_c = c + (dir * step);
+            int check_c = c + (horiz_dir * step);
 
-            // Check if the original cell we are checking was empty before trying move
-            // This prevents "skipping" over obstacles more effectively
-            Element* originalTargetElement = world.getElement(next_r, next_c);
-            if (!originalTargetElement) { // Only try to move if original target was empty
-                if (world.tryMoveOrSwap(r, c, next_r, next_c)) {
-                    return true; // Moved horizontally
+            // Check bounds first
+            if (!world.isWithinBounds(r, check_c)) {
+                break; // Stop checking this direction if out of bounds
+            }
+
+            // Check if target spot in nextGrid is already claimed
+            if (world.getElementFromNext(r, check_c)) {
+                break; // Stop checking this direction (already claimed)
+            }
+
+            // Check if original spot was empty
+            Element* originalTargetElement = world.getElement(r, check_c);
+            if (!originalTargetElement) {
+                // Found a potential empty spot! Is it the closest so far?
+                if (step < min_dist) {
+                    min_dist = step;
+                    best_h_move_c = check_c;
                 }
-                else {
-                    // If tryMoveOrSwap failed even though original was empty,
-                    // it means the spot in nextGrid was already claimed this tick.
-                    // Stop checking further in this direction.
-                    break;
-                }
+                // Even if found, continue checking closer spots on the other side
+                // So, don't break the inner step loop here.
             }
             else {
-                // Original target wasn't empty, stop checking this direction
+                // Hit a non-empty original cell, stop checking further this direction
                 break;
             }
         }
-        dir *= -1; // Flip direction
+        // Optimization: If we found a move on the first side, we don't *need*
+        // to check the other side for an equally close or closer spot,
+        // as tryMoveOrSwap gives priority based on call order. But checking
+        // both ensures we find the *absolute* closest if desired.
+        // Let's keep checking both for now.
+        horiz_dir *= -1; // Flip direction
+    }
+
+    // After checking both sides, if we found a valid target column:
+    if (best_h_move_c != c) {
+        // Attempt the move to the best (closest) spot found
+        // tryMoveOrSwap will do the final atomic check on nextGrid availability
+        if (world.tryMoveOrSwap(r, c, r, best_h_move_c)) {
+            return true; // Moved horizontally
+        }
     }
 
     // --- No Movement ---
     return false;
 }
-
 /**
  * @brief Attempts to evaporate the liquid based on temperature and conditions.
  * Checks temperature against boiling point, checks space above, and potentially

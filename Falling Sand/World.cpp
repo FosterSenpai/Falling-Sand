@@ -15,7 +15,9 @@
 #include <stdexcept>    // For std::invalid_argument, std::out_of_range
 #include <utility>      // For std::move, std::swap
 #include <cstdlib>      // For rand()
-
+#include <iostream> // Make sure included
+constexpr int DEBUG_ROW = 100; // Choose a row where sand might hit water
+constexpr int DEBUG_COL = 100; // Choose a column
 // Include headers for concrete Element types as they are created:
 #include "SandElement.h"
 #include "Liquid.h"
@@ -171,6 +173,8 @@ void World::update() {
 
     // --- Step 4: Swap grids ---
     m_grid.swap(m_nextGrid);
+
+
 }
 
 void World::requestPlacement(int r, int c, ParticleType type) {
@@ -180,45 +184,31 @@ void World::requestPlacement(int r, int c, ParticleType type) {
 
 // **=== Element Interaction Methods (Implementation) ===**
 // Inside World::tryMoveOrSwap in World.cpp
-
 bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
-    // 1. Bounds checks for both source and destination
+    // 1. Bounds checks
     if (!isWithinBounds(r_from, c_from) || !isWithinBounds(r_to, c_to)) {
-        // std::cerr << "Debug: tryMoveOrSwap failed (Out of Bounds) for " << r_from << "," << c_from << " -> " << r_to << "," << c_to << std::endl;
         return false;
     }
-
-    // 2. Check if source element exists in the current grid (m_grid)
+    // 2. Check source
     if (!m_grid[r_from][c_from]) {
-        // std::cerr << "Debug: tryMoveOrSwap failed (Source Element is Null) at " << r_from << "," << c_from << std::endl;
         return false; // Cannot move nothing
     }
-    Element* moverElement = m_grid[r_from][c_from].get(); // Get raw pointer for later use
+    Element* moverElement = m_grid[r_from][c_from].get();
 
-    // 3. Check target cell in NEXT grid **atomically**
-    // If m_nextGrid[r_to][c_to] is ALREADY occupied by something this tick, fail.
+    // 3. Check target cell in NEXT grid atomically
     if (m_nextGrid[r_to][c_to]) {
-        // std::cerr << "Debug: tryMoveOrSwap failed (Target [" << r_to << "," << c_to << "] in nextGrid already claimed by Type "
-        //           << static_cast<int>(m_nextGrid[r_to][c_to]->getType()) << ") when called by (" << r_from << "," << c_from << ")" << std::endl;
         return false; // Target spot already claimed this tick
     }
 
-    // 4. Target spot in m_nextGrid is free! Check what was originally
-    //    in the target cell in m_grid to see if it's empty, fluid, or solid.
-    Element* originalTargetElement = getElement(r_to, c_to); // Check m_grid
+    // 4. Check original target in m_grid
+    Element* originalTargetElement = getElement(r_to, c_to);
 
     // --- Case A: Original Target was Empty ---
     if (!originalTargetElement) {
-        // Perform the move: Mover goes from m_grid[from] to m_nextGrid[to]
-        m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);
-
-        // --- Wake up relevant particles ---
-        wakeNeighbors(r_from, c_from); // Wake neighbors around original spot
-        wakeNeighbors(r_to, c_to);     // Wake neighbors around new spot
-        if (m_nextGrid[r_to][c_to]) {    // Wake up the element that just moved
-            m_nextGrid[r_to][c_to]->wakeUp();
-        }
-        // std::cout << "Debug: tryMoveOrSwap SUCCESS (Moved into empty) from (" << r_from << "," << c_from << ") to (" << r_to << "," << c_to << ")" << std::endl;
+        m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]); // MOVE
+        wakeNeighbors(r_from, c_from);
+        wakeNeighbors(r_to, c_to);
+        if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); }
         return true;
     }
     // --- Case B: Original Target was Occupied ---
@@ -229,12 +219,7 @@ bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
         if (Solid* solidMover = dynamic_cast<Solid*>(moverElement)) { moverDensity = solidMover->getDensity(); densityObtained = true; }
         else if (Liquid* liquidMover = dynamic_cast<Liquid*>(moverElement)) { moverDensity = liquidMover->getDensity(); densityObtained = true; }
         else if (Gas* gasMover = dynamic_cast<Gas*>(moverElement)) { moverDensity = gasMover->getDensity(); densityObtained = true; }
-
-        if (!densityObtained) {
-            // This element type doesn't participate in density-based displacement
-             // std::cerr << "Debug: tryMoveOrSwap failed (Mover has no density?) at (" << r_from << "," << c_from << ")" << std::endl;
-            return false;
-        }
+        if (!densityObtained) return false; // Mover has no density defined
 
         // Check if original target is a displaceable fluid
         float targetDensity = 0.0f;
@@ -243,26 +228,19 @@ bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
         else if (Gas* gasTarget = dynamic_cast<Gas*>(originalTargetElement)) { isFluid = true; targetDensity = gasTarget->getDensity(); }
 
         if (isFluid && moverDensity > targetDensity) {
-            // Perform the swap: Mover from m_grid[from] -> m_nextGrid[to]
-            //                   Target from m_grid[to]   -> m_nextGrid[from]
-            m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);
-            m_nextGrid[r_from][c_from] = std::move(m_grid[r_to][c_to]); // Get original target from m_grid
+            // Perform the SWAP
+            m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);     // Mover (A) goes to target spot in next
+            m_nextGrid[r_from][c_from] = std::move(m_grid[r_to][c_to]);   // Target (W) goes to mover's original spot in next
 
-            // --- Wake up relevant particles ---
-            wakeNeighbors(r_from, c_from); // Wake neighbors around original spot of mover
-            wakeNeighbors(r_to, c_to);     // Wake neighbors around original spot of target
-            if (m_nextGrid[r_to][c_to]) {    // Wake up the element that moved to target
-                m_nextGrid[r_to][c_to]->wakeUp();
-            }
-            if (m_nextGrid[r_from][c_from]) { // Wake up the element that was displaced to origin
-                m_nextGrid[r_from][c_from]->wakeUp();
-            }
-            // std::cout << "Debug: tryMoveOrSwap SUCCESS (Swapped with fluid) involving (" << r_from << "," << c_from << ") and (" << r_to << "," << c_to << ")" << std::endl;
+            // Wake up relevant particles
+            wakeNeighbors(r_from, c_from);
+            wakeNeighbors(r_to, c_to);
+            if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); }     // Wake mover
+            if (m_nextGrid[r_from][c_from]) { m_nextGrid[r_from][c_from]->wakeUp(); } // Wake displaced fluid
             return true;
         }
         else {
-            // Target was solid or denser/equal fluid - cannot displace
-            // std::cerr << "Debug: tryMoveOrSwap FAILED (Target is Solid or denser fluid) at (" << r_to << "," << c_to << ") called by (" << r_from << "," << c_from << ")" << std::endl;
+            // Blocked by solid or denser/equal fluid
             return false;
         }
     }

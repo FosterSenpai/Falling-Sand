@@ -200,6 +200,7 @@ void Game::placeParticles(int mouseGridX, int mouseGridY) {
 void Game::update() {
     // Advance particle sim by one step
 	m_world.update();
+
     // Update the UI
 	updateUIText();
     // TODO: FPS calc is currently in run(), could move here
