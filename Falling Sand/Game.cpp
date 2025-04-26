@@ -1,12 +1,24 @@
+// ============================================================================
+// Project:     Falling Sand Simulation
+// File:        Game.cpp
+// Author:      Foster Rae
+// Date Created:2025-04-23
+// Last Update: 2025-04-26
+// Version:     1.7 
+// Description: Implementation file for the Game class.
+//              Handles the main game loop, window management, input handling,
+//              UI display and rendering logic.
+// ============================================================================
+
 #include "Game.h"
 #include "Utils.h"
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
-#include <iostream>  // For std::cout, std::cerr
-#include <stdexcept> // For handling errors like font loading
-#include <cmath>     // For std::floor
-#include <ctime>     // For time() used in srand()
+#include <iostream>
+#include <stdexcept>
+#include <cmath>
+#include <ctime>
 
 // **=== Constructors & Destructors ===**
 
@@ -20,7 +32,7 @@ Game::Game() :
     m_gridRows(static_cast<int>(m_windowHeight / m_cellWidth)),
 
     // --- Initialize World ---
-    m_world(m_gridRows, m_gridCols), // Construct world with calculated dimensions
+    m_world(m_gridRows, m_gridCols),
 
     // --- Initialize other members ---
     m_isRunning(true),
@@ -111,7 +123,7 @@ void Game::run() {
 // **=== Private Methods ===**
 
 void Game::processEvents() {
-    // Poll for all pending events accumulated since the last loop iteration
+	// Poll for events in the window
     while (const std::optional event = m_window.pollEvent())
     {
 		// - Window 'x' button -
@@ -135,18 +147,18 @@ void Game::processEvents() {
             // **=== Brush Settings Adjustment ===**
 
 			// -- Adjust Brush Size --
-            if (keyPressed->scancode == sf::Keyboard::Scan::Hyphen) { // Decrease brush size key
-                if (m_brushSize > 1) { // Ensure size doesn't go below 1
+            if (keyPressed->scancode == sf::Keyboard::Scan::Hyphen) { // Decrease brush size
+                if (m_brushSize > 1) {
                     m_brushSize--;
                 }
             }
-            if (keyPressed->scancode == sf::Keyboard::Scan::Equal) { // Increase brush size key (often '+' requires shift)
-                if (m_brushSize < 50) { // Limit maximum brush size
+            if (keyPressed->scancode == sf::Keyboard::Scan::Equal) { // Increase brush size
+                if (m_brushSize < 50) {
                     m_brushSize++;
                 }
             }
 
-            // -- Adjust Brush Particle Type --
+			// -- Change Brush Type on Number Key Press --
             if (keyPressed->scancode == sf::Keyboard::Scan::Num0) { m_brushType = ParticleType::EMPTY; }
             if (keyPressed->scancode == sf::Keyboard::Scan::Num1) { m_brushType = ParticleType::SAND; }
             if (keyPressed->scancode == sf::Keyboard::Scan::Num2) { m_brushType = ParticleType::DIRT; }
@@ -167,6 +179,7 @@ void Game::handleRealtimeInput() {
 		//Get mouse position in grid coordinates
 		int mouseCol = static_cast<int>(std::floor(sf::Mouse::getPosition(m_window).x / m_cellWidth));
 		int mouseRow = static_cast<int>(std::floor(sf::Mouse::getPosition(m_window).y / m_cellWidth));
+
 		// Place particles based on the current brush settings
 		placeParticles(mouseCol, mouseRow);
     }
@@ -175,14 +188,13 @@ void Game::handleRealtimeInput() {
 void Game::placeParticles(int mouseGridX, int mouseGridY) {
     // Calculate extent of brush (Radius)
     int extent = static_cast<int>(std::floor(static_cast<int>(m_brushSize) / 2.0f));
-    const int densityPercent = Utils::getDensityForType(m_brushType); // % Chance of a particle being placed within the brush area
 
     // Iterate through region around the mouse position on the grid
 	for (int i = -extent; i <= extent; ++i) {     // Iterate rows within extent
         for (int j = -extent; j <= extent; ++j) { // Iterate cols within extent
 
             // -- Brush Density --
-			if (rand() % 100 < densityPercent) { // Fires with a chance of densityPercent
+			if (rand() % 100 < Utils::getDensityForType(m_brushType)) { // Fires with a chance of the brush type density
 				// Rows/cols brush is in
 				int col = mouseGridX + j;
 				int row = mouseGridY + i;
@@ -203,7 +215,6 @@ void Game::update() {
 
     // Update the UI
 	updateUIText();
-    // TODO: FPS calc is currently in run(), could move here
 }
 
 void Game::render() {
@@ -236,7 +247,7 @@ void Game::prepareVertices() {
     // Clear the previous frame vertices
     m_gridVertices.clear();
 
-    // Get ref to current grid (which now contains unique_ptrs)
+    // Get ref to current grid
     const auto& currentGrid = m_world.getGridState();
 
     // Iterate through all cells in grid
@@ -248,13 +259,13 @@ void Game::prepareVertices() {
 
             // Check if the pointer is valid (not nullptr)
             if (elementPtr) {
-                // Get the raw pointer to use (doesn't affect ownership)
+                // Get the pointer to use
                 Element* element = elementPtr.get();
 
                 // Get color using the element's virtual method
                 sf::Color particleColor = element->getColor();
 
-                // Calculate the screen coordinates of the cell's corners (same as before)
+                // Calculate the screen coordinates of the cell's corners
                 float left = static_cast<float>(c) * m_cellWidth;
                 float top = static_cast<float>(r) * m_cellWidth;
                 float right = left + m_cellWidth;
@@ -265,11 +276,12 @@ void Game::prepareVertices() {
                 sf::Vertex bottomLeft(sf::Vector2f(left, bottom), particleColor);
                 sf::Vertex bottomRight(sf::Vector2f(right, bottom), particleColor);
 
-                // Append vertices for the two triangles (same as before)
+                // Append vertices for the two triangles
+				// Triangle 1
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(topRight);
                 m_gridVertices.append(bottomRight);
-
+				// Triangle 2
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(bottomRight);
                 m_gridVertices.append(bottomLeft);

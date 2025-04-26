@@ -69,32 +69,3 @@ ParticleType GrassElement::getType() const {
 float GrassElement::getDensity() const {
     return 1.1f; // Lighter than dirt/sand?
 }
-
-float GrassElement::getHardness() const {
-    return 0.1f; // Very soft
-}
-
-float GrassElement::getThermalConductivity() const {
-    return 0.15f; // Similar to dirt?
-}
-
-float GrassElement::getMeltingPoint() const {
-    // Grass burns/decomposes, doesn't melt cleanly. Use a high dummy value?
-    return 400.0f; // Lower than dirt perhaps, representing decomposition temp?
-}
-
-ParticleType GrassElement::getLiquidForm() const {
-    // Doesn't melt into a standard liquid
-    return ParticleType::EMPTY;
-}
-
-ParticleType GrassElement::getGasForm() const {
-    // Burns into maybe smoke/carbon? Needs reaction system.
-    // TODO: Add SMOKE or ASH type later?
-    return ParticleType::EMPTY;
-}
-
-// Optional Override: Make grass slightly flammable?
-// bool GrassElement::isFlammable() const override {
-//    return true;
-// }

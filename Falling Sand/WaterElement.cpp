@@ -4,41 +4,55 @@
 // Author:      Foster Rae
 // Date Created:2025-04-26
 // Last Update: 2025-04-26
-// Version:     1.0
+// Version:     1.2
 // Description: Implementation file for the WaterElement class.
 // ============================================================================
 
 #include "WaterElement.h"
-#include "World.h"          // Needed for update parameters
-#include "Particle.h"       // For ParticleType enum
-#include <SFML/Graphics.hpp> // For sf::Color
+#include "World.h"
+#include "Particle.h"
+#include <SFML/Graphics.hpp>
+#include <memory>
+#include <cstdlib>
 
 // **=== Overridden Public Methods ===**
 
 void WaterElement::update(World& world, int r, int c) {
-    this->wakeUp(); // Force awake
-    age++;
-    bool evaporated = false;
-    bool moved = false;
 
+	age++;              // Increment age for this element
+	bool acted = false; // Track if the element has acted this tick
+
+    // --- Evaporation ---
+    // Check temperature and attempt to evaporate first
     if (attemptEvaporation(world, r, c)) {
-        evaporated = true;
+        // If evaporation happened, the element was replaced in nextGrid.
+        // No further action needed for this water particle this tick.
+        acted = true;
+        // Don't mark as updated, it was replaced.
     }
 
-    if (!evaporated) {
-        moved = attemptFlow(world, r, c); // Store result
-        if (moved) {
-            // Wakeup handled by tryMoveOrSwap's neighbour calls
+    // --- Flow ---
+    // Attempt flow if not evaporated
+    if (!acted) {
+        if (attemptFlow(world, r, c)) {
+			acted = true; // Element successfully flowed
         }
     }
 
+    // --- Update Mark ---
     // Mark as updated if the element still exists (wasn't evaporated)
-    if (!evaporated) {
+    // This tells the World::update loop that this element processed its turn.
+    if (!acted) {
+        this->markAsUpdated();
+    }
+    else {
+        // If it acted (flowed), it also needs marking.
+        // Only skip marking if evaporated (element is gone).
         this->markAsUpdated();
     }
 }
+
 sf::Color WaterElement::getColor() const {
-    // Water color (e.g., from Utils.cpp)
     // TODO: Add variation based on depth/neighbours later?
     return sf::Color(60, 120, 180);
 }
@@ -47,27 +61,20 @@ ParticleType WaterElement::getType() const {
     return ParticleType::WATER;
 }
 
-// --- Liquid Property Implementations ---
+// **=== Property Implementations ===**
 
 float WaterElement::getDensity() const {
-    // Standard density for water
     return 1.0f;
 }
 
 int WaterElement::getDispersionRate() const {
-    // Water spreads relatively easily
-    return 6; // Example value (try higher numbers for more spread)
+    return 6;
 }
 
 float WaterElement::getBoilingPoint() const {
-    // Standard boiling point
     return 100.0f; // Degrees C
 }
 
 ParticleType WaterElement::getGasForm() const {
-    // Water turns into Steam
-    // TODO: Add ParticleType::STEAM to the enum in Particle.h
-    // For now, return EMPTY as a placeholder if STEAM doesn't exist
-    // return ParticleType::EMPTY;
-    return ParticleType::STEAM; // Assuming STEAM will be added
+    return ParticleType::STEAM;
 }

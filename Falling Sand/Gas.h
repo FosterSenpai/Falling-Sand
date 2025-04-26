@@ -3,8 +3,8 @@
 // File:        Gas.h
 // Author:      Foster Rae
 // Date Created:2025-04-25
-// Last Update: 2025-04-25 // Updated date
-// Version:     1.1 // Incremented version
+// Last Update: 2025-04-26
+// Version:     1.1
 // Description: Header file for the Gas abstract class.
 //              Inherits from Element and serves as a base for all gaseous
 //              particle types. Defines common gas properties (density,
@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "Element.h" // Include the base class definition
+#include "Element.h"
 
 // Forward declaration of World
 class World;
@@ -23,57 +23,68 @@ class World;
  * @brief Abstract intermediate class representing the Gaseous state of matter.
  *
  * Defines interfaces and potentially common logic for gaseous behaviours like
- * rising, expansion, density interactions, and condensation. Concrete derived
- * classes must provide implementations for the pure virtual functions.
+ * rising, expansion, density interactions, and condensation.
  */
 class Gas : public Element {
 public:
     // **=== Destructor ===**
+
+    /**
+     * @brief Virtual destructor. Ensures proper cleanup for derived classes.
+     */
     virtual ~Gas() = default;
 
-    // **=== Core Simulation Method (Pure Virtual) ===**
+
+    // **=== Core Simulation Method ===**
+
     /**
      * @brief Updates the gas element's state (expansion, interactions, condensation).
-     * Concrete derived classes MUST implement this. They will likely call helper
-     * functions like attemptExpansion() and tryCondense() within their implementation.
      * @param world A reference to the World object.
      * @param r The element's current row index.
      * @param c The element's current column index.
      */
     virtual void update(World& world, int r, int c) = 0;
 
-    // **=== Property Getters (Pure Virtual or Virtual with Default) ===**
+
+    // **=== Getters ===**
+
+    /**
+     * @brief Gets the display color of this gas element.
+     * @return sf::Color The color for rendering.
+     */
     virtual sf::Color getColor() const = 0;
+
+    /**
+     * @brief Gets the specific type identifier for this gas element.
+     * @return ParticleType The enum value (e.g., ParticleType::STEAM).
+     */
     virtual ParticleType getType() const = 0;
 
     /**
      * @brief Gets the density of this gas element. Crucial for buoyancy
      * (rising/falling) relative to other gases.
-     * (Must be implemented by concrete derived classes).
      * @return float The density value (relative units).
      */
     virtual float getDensity() const = 0;
 
     /**
      * @brief Gets the dispersion rate (how readily it spreads).
+     * 
      * Higher values mean the gas spreads more aggressively. Controls movement
      * range in expansion logic.
-     * (Must be implemented by concrete derived classes).
      * @return int The number of cells to check/attempt to move into each tick.
      */
     virtual int getDispersionRate() const = 0;
 
     /**
      * @brief Gets the condensation point temperature for this gas.
-     * (Must be implemented by concrete derived classes).
      * @return float The temperature (e.g., in Celsius) at or below which condensation can occur.
      */
     virtual float getCondensationPoint() const = 0;
 
     /**
      * @brief Gets the ParticleType of the liquid this gas turns into upon condensation.
-     * (Must be implemented by concrete derived classes).
-     * Requires corresponding Liquid types (e.g., WATER) to be added to ParticleType enum.
+     * @param type The ParticleType of the element to create.
      * @return ParticleType The type of the resulting liquid element.
      */
     virtual ParticleType getLiquidForm() const = 0;
@@ -83,14 +94,8 @@ public:
      * @return true if flammable, false otherwise. Defaults to false.
      */
     virtual bool isFlammable() const {
-        return false; // Default: gases are not flammable
+        return false;
     }
-
-
-    // **=== Interaction Methods ===**
-    // Could add methods like canBeDisplacedBy, but gas displacement is complex.
-    // Often handled implicitly by the attemptExpansion logic comparing densities.
-
 
 protected:
     // **=== Protected Helper Methods ===**
@@ -99,29 +104,20 @@ protected:
      * @brief Attempts to perform standard gas expansion/rising logic.
      * Checks upwards, diagonally upwards, and sideways based on dispersion rate,
      * prioritizing empty cells or displacing lighter gases.
-     * Should be called by the derived class's update() method.
-     * (Implementation would go in Gas.cpp or be defined inline).
      * @param world Reference to the world grid.
      * @param r Current row.
      * @param c Current column.
-     * @return true if the gas successfully moved or attempted to move, false otherwise.
+     * @return true if the gas successfully moved or swapped, false otherwise.
      */
     virtual bool attemptExpansion(World& world, int r, int c); // Declaration only
 
     /**
      * @brief Attempts to condense the gas into its liquid form based on temperature.
-     * Checks temperature against condensation point, potentially checks neighbors,
-     * and may replace this gas element with its liquid form via the World object.
-     * Should be called by the derived class's update() method.
-     * (Implementation would go in Gas.cpp or be defined inline).
      * @param world Reference to the world grid.
      * @param r Current row.
      * @param c Current column.
-     * @return true if condensation occurred, false otherwise.
+     * @return true if condensation occurred and element was replaced, false otherwise.
      */
     virtual bool tryCondense(World& world, int r, int c); // Declaration only
 
-
-private:
-    // **=== Private Members ===**
 };

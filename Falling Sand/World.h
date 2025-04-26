@@ -3,8 +3,8 @@
 // File:        World.h
 // Author:      Foster Rae
 // Date Created:2025-04-23
-// Last Update: 2025-04-25 // Updated Date
-// Version:     1.1 // Updated Version
+// Last Update: 2025-04-26
+// Version:     1.6
 // Description: Header file for the World class.
 //              Manages the grid of Elements and handles simulation updates,
 //              providing interaction methods for Elements.
@@ -13,26 +13,48 @@
 #pragma once
 
 #include <vector>
-#include <memory>       // For std::unique_ptr
-#include "Particle.h"    // For ParticleType enum
-#include "Element.h"     // Include base Element class
+#include <memory>
+#include "Particle.h"
+#include "Element.h"
 
-// Forward declare Element (already included, but good practice)
+// Forward declaration
 class Element;
 
-// Struct to hold particle placement requests
+/**
+ * @brief Structure to hold information for pending element placements.
+ *
+ * These requests decouple the user input from the simulation update cycle,
+ * so when placement is requested, it doesn't immediately affect the grid.
+ * This avoids issues with elements trying to interact with each other
+ * straight away.
+ */
 struct PlacementRequest {
     int r;
     int c;
     ParticleType type;
 };
 
+/**
+ * @brief Manages the simulation grid and element interactions.
+ *
+ * Handles the storage of elements using unique pointers in a double buffer,
+ * handles the update cycle, and manages element placement requests.
+ *
+ * Provides methods for elements to query their neighbours and request moves/swaps.
+ */
 class World
 {
 public:
     // **=== Constructors & Destructors ===**
+
+    /**
+     * @brief Constructs a World object with a grid of the specified dimensions.
+     * @param numRows The number of rows in the grid.
+     * @param numCols The number of columns in the grid.
+     */
     World(int numRows, int numCols);
-    // Default destructor is likely fine as unique_ptr handles cleanup
+
+    // Defauld destructor is okay for now as unique_ptrs will handle cleanup themselves.
 
     // **=== Public Methods ===**
 
@@ -43,52 +65,52 @@ public:
      */
     void update();
 
+    // -- Element Placement --
     /**
-	 * @brief Handles the placement of elements in the grid.
-	 * @param r Row index for placement.
-	 * @param c Column index for placement.
-	 * @param type The ParticleType of the element to place.
+     * @brief Requests placement of an element type at given coordinates.
+     * The placement will be processed at the start of the next update cycle.
+     * @param r The row index for placement.
+     * @param c The column index for placement.
+     * @param type The ParticleType of the element to request.
      */
     void requestPlacement(int r, int c, ParticleType type);
 
-    // -- Element Creation --
     /**
-     * @brief Creates and places a new element of the specified type at (r, c)
-     * in the main grid (m_grid), replacing any existing element.
+     * @brief Creates and places an element in the main grid (m_grid).
+     *
+     * Primarily used during initial setup or direct buffer processing.
      * @param r The row index.
      * @param c The column index.
      * @param type The ParticleType of the element to create.
      */
     void setElementByType(int r, int c, ParticleType type);
 
+
     // -- Getters --
     /**
-     * @brief Gets a raw pointer to the element in the current grid (m_grid).
-     * Returns nullptr if coordinates are out of bounds or cell is empty.
-     * Pointer is for observation, ownership remains with the World.
+     * @brief Gets a pointer to the element in the current grid (m_grid).
+     *
      * @param r The row index.
      * @param c The column index.
-     * @return Element* Pointer to the element, or nullptr.
+     * @return Element* Pointer to the element, or nullptr if out of bounds or empty.
      */
     Element* getElement(int r, int c) const;
 
-     /**
-     * @brief Gets a raw pointer to the element in the next grid (m_nextGrid).
-     * Used for checking state during updates before it's finalized.
-     * Returns nullptr if coordinates are out of bounds or cell is empty.
-     * Pointer is for observation, ownership remains with the World.
+    /**
+     * @brief Gets a pointer to the element in the next grid state (m_nextGrid).
+     *
+     * Useful for checks within element update logic against the next state.
      * @param r The row index.
      * @param c The column index.
-     * @return Element* Pointer to the element, or nullptr.
+     * @return Element* Pointer to the element, or nullptr if out of bounds or empty.
      */
     Element* getElementFromNext(int r, int c) const;
 
     /**
      * @brief Gets the ParticleType of the element at (r, c) in the current grid.
-     * Convenience function. Returns EMPTY if out of bounds or cell is empty.
      * @param r The row index.
      * @param c The column index.
-     * @return ParticleType The type of the element.
+     * @return ParticleType The type of the element. If out of bounds or empty, returns ParticleType::EMPTY.
      */
     ParticleType getElementType(int r, int c) const;
 
@@ -98,12 +120,20 @@ public:
      */
     const std::vector<std::vector<std::unique_ptr<Element>>>& getGridState() const;
 
-    // Get grid dimensions
+    /**
+     * @brief Get the number of rows in the grid.
+     * @return int The number of rows.
+     */
     int getRows() const;
+
+    /**
+     * @brief Get the number of columns in the grid.
+     * @return int The number of columns.
+     */
     int getCols() const;
 
 
-    // **=== Methods for Element Interaction (used by Element::update) ===**
+    // **=== Methods for Element Interaction ===**
 
     /**
      * @brief Checks if the given coordinates are within the grid boundaries.
@@ -114,44 +144,46 @@ public:
     bool isWithinBounds(int r, int c) const;
 
     /**
-     * @brief Attempts to move/swap element from (r_from, c_from) to (r_to, c_to).
-     * Checks if the target cell in m_nextGrid is available or displaceable,
-     * and if so, performs the move/swap atomically for this tick.
+     * @brief Attempts to move/swap element from (r_from, c_from) in m_grid
+     * to (r_to, c_to) in m_nextGrid. Checks nextGrid availability and original
+     * occupant type/density to decide on move/swap/fail.
+     * @param r_from Source row index.
+     * @param c_from Source column index.
+     * @param r_to Target row index.
+     * @param c_to Target column index.
      * @return true if the move/swap was successfully performed, false otherwise.
      */
     bool tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to);
 
     /**
-     * @brief Moves the element from (r_from, c_from) in m_grid to (r_to, c_to)
-     * in m_nextGrid. The original cell in m_nextGrid is implicitly left empty
-     * unless something else moves there. Ownership is transferred via std::move.
-     * Precondition: Target cell in m_nextGrid should be empty or prepared.
+     * @brief Moves the element pointer from m_grid[from] to m_nextGrid[to].
+     * Assumes necessary checks have been made by caller.
      * @param r_from Source row index.
      * @param c_from Source column index.
      * @param r_to Target row index.
      * @param c_to Target column index.
      */
-    void moveElementToNext(int r_from, int c_from, int r_to, int c_to);
+    void moveElementToNext(int r_from, int c_from, int r_to, int c_to); // *** Declaration Included ***
 
     /**
-     * @brief Swaps the elements currently at (r1, c1) and (r2, c2) in m_grid,
-     * placing them into the corresponding positions in m_nextGrid.
-     * Handles ownership transfer via std::move.
-     * @param r1 Row index of the first element.
-     * @param c1 Column index of the first element.
-     * @param r2 Row index of the second element.
-     * @param c2 Column index of the second element.
+     * @brief Swaps element pointers between m_grid locations into m_nextGrid.
+     * Assumes necessary checks have been made by caller.
+     * @param r1 Row index of the first element location.
+     * @param c1 Column index of the first element location.
+     * @param r2 Row index of the second element location.
+     * @param c2 Column index of the second element location.
      */
-    void swapElementsInNext(int r1, int c1, int r2, int c2);
+    void swapElementsInNext(int r1, int c1, int r2, int c2); // *** Declaration Included ***
 
     /**
      * @brief Directly sets the element pointer for a cell in the next grid (m_nextGrid).
-     * Takes ownership of the provided element pointer. Used internally by move/swap.
+     *
+     * Used internally by other methods.
      * @param r The row index.
      * @param c The column index.
-     * @param element A unique_ptr to the element to place.
+     * @param element A unique_ptr to the element to place (ownership transferred).
      */
-     void setNextElement(int r, int c, std::unique_ptr<Element> element);
+    void setNextElement(int r, int c, std::unique_ptr<Element> element);
 
     /**
      * @brief Clears a cell in the next grid (m_nextGrid), setting it to nullptr.
@@ -160,43 +192,43 @@ public:
      */
     void clearNextGridCell(int r, int c);
 
-    // **=== Element Factory (Example) ===**
     /**
-     * @brief Creates a unique_ptr to a specific Element subclass based on type.
-     * (Could be implemented in World.cpp)
+     * @brief Creates a unique_ptr to a specific Element subclass based on type. (Factory)
      * @param type The ParticleType to create.
-     * @return std::unique_ptr<Element> Pointer to the new element, or nullptr if type is invalid/EMPTY.
+     * @return std::unique_ptr<Element> Pointer to the new element, or nullptr.
      */
     std::unique_ptr<Element> createElementByType(ParticleType type);
 
 
 private:
-    // **=== Member data ===**
-    // Grids now store unique pointers to Element objects
-    std::vector<std::vector<std::unique_ptr<Element>>> m_grid;      // Current state grid
-    std::vector<std::vector<std::unique_ptr<Element>>> m_nextGrid;  // Grid for calculating next state
-	std::vector<PlacementRequest> m_placementRequests;              // Requests for element placements
+    // **=== Private Members ===**
 
-    // Dimensions
+    // -- Grids --
+    /** @brief The main grid representing the current simulation state. */
+    std::vector<std::vector<std::unique_ptr<Element>>> m_grid;
+    /** @brief The grid used to calculate the next simulation state. */
+    std::vector<std::vector<std::unique_ptr<Element>>> m_nextGrid;
+    /** @brief Buffer for element placement requests from user input or other sources. */
+    std::vector<PlacementRequest> m_placementRequests;
+
+    // -- Dimensions --
+    /** @brief Number of rows in the simulation grid. */
     int m_rows;
+    /** @brief Number of columns in the simulation grid. */
     int m_cols;
 
-    // -- Flags --
-    bool m_sweepRight = true; // Tracks the column update direction
+    // -- Update Logic State --
+    /** @brief Tracks the column sweep direction for the update loop (alternates each frame). */
+    bool m_sweepRight = true;
 
-    void wakeNeighbors(int r, int c);
 
     // **=== Private Methods ===**
 
-    // Remove or refactor old private helpers like isNextGridCellEmpty, getNeighborType,
-    // updateSand, updateWater, etc. The logic moves to Element classes.
-    // The updateParticle dispatcher might remain but call element->update().
-
     /**
-     * @brief Dispatches the update logic to the element at the given coordinates.
-     * Reads the element from m_grid, checks flags (awake, updated), calls element->update().
-     * @param r The row index of the particle to potentially update.
-     * @param c The column index of the particle to potentially update.
+     * @brief Wakes up elements in a neighborhood around the given cell.
+     * Called after a move/swap to ensure neighbours react on the next tick.
+     * @param r Central row index.
+     * @param c Central column index.
      */
-    void updateElement(int r, int c); // Renamed from updateParticle
+    void wakeNeighbors(int r, int c);
 };

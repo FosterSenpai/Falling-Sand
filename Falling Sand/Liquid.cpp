@@ -4,33 +4,33 @@
 // Author:      Foster Rae
 // Date Created:2025-04-26
 // Last Update: 2025-04-26
-// Version:     1.1
+// Version:     1.4
 // Description: Implementation file for the Liquid abstract class.
 //              Contains common logic shared by all liquid elements,
 //              including flow and evaporation behaviours.
 // ============================================================================
 
 #include "Liquid.h"
-#include "World.h"       // Need World definition for interactions
-#include "Gas.h"         // Needed for evaporation check & density comparison
-#include "Particle.h"    // For ParticleType enum
-#include <cstdlib>       // For rand()
-#include <utility>       // For std::move (used by World methods)
-#include <memory>        // For std::unique_ptr (used by World methods)
+#include "World.h"
+#include "Gas.h"
+#include "Particle.h"
+#include <cstdlib>
+#include <utility>
+#include <memory>
+#include "Solid.h"
 
 // **=== Protected Helper Methods ===**
 
 /**
  * @brief Attempts to perform standard liquid flow logic (down, diagonal, horizontal).
+ * 
  * Should be called by the derived class's update() method.
- * Interacts with the World's nextGrid state via World methods.
  * @param world Reference to the world grid and its methods.
  * @param r Current row.
  * @param c Current column.
  * @return true if the liquid successfully moved or swapped, false otherwise.
  */
 bool Liquid::attemptFlow(World& world, int r, int c) {
-    float selfDensity = this->getDensity();
 
     // --- Priority 1: Try Move/Swap Directly Below ---
     if (world.tryMoveOrSwap(r, c, r + 1, c)) {
@@ -48,10 +48,9 @@ bool Liquid::attemptFlow(World& world, int r, int c) {
         return true;
     }
 
-    // --- Priority 3: Check Horizontal ---
-    // Find ALL potentially valid horizontal moves first, then try the closest one.
+    // --- Priority 3: Check Horizontal (Yielding to Denser Falling) ---
     int dispersion = this->getDispersionRate();
-    int best_h_move_c = c; // Target column, c means no move found yet
+    int best_h_move_c = c;      // Target column, c means no move found yet
     int min_dist = dispersion + 1; // Distance to closest valid spot
 
     int horiz_dir = (rand() % 2 == 0) ? 1 : -1; // Randomize side check order
@@ -59,45 +58,64 @@ bool Liquid::attemptFlow(World& world, int r, int c) {
     for (int i = 0; i < 2; ++i) { // Check both L/R directions
         for (int step = 1; step <= dispersion; ++step) {
             int check_c = c + (horiz_dir * step);
+            int check_r = r; // Keep row the same for horizontal check
 
             // Check bounds first
-            if (!world.isWithinBounds(r, check_c)) {
+            if (!world.isWithinBounds(check_r, check_c)) {
                 break; // Stop checking this direction if out of bounds
             }
 
-            // Check if target spot in nextGrid is already claimed
-            if (world.getElementFromNext(r, check_c)) {
-                break; // Stop checking this direction (already claimed)
+            // Check if we should yield to a denser particle falling above target
+            bool yieldToElementAbove = false;
+            Element* aboveTarget = world.getElement(check_r - 1, check_c); // Check cell *above* the potential target
+
+            if (aboveTarget) { // If there is something above the target...
+                // Get the density of the element
+                float aboveTargetDensity = 0.0f;
+                bool densityObtained = false;
+                if (Solid* solidAbove = dynamic_cast<Solid*>(aboveTarget)) { aboveTargetDensity = solidAbove->getDensity(); densityObtained = true; }
+                else if (Liquid* liquidAbove = dynamic_cast<Liquid*>(aboveTarget)) { aboveTargetDensity = liquidAbove->getDensity(); densityObtained = true; }
+                else if (Gas* gasAbove = dynamic_cast<Gas*>(aboveTarget)) { aboveTargetDensity = gasAbove->getDensity(); densityObtained = true; }
+
+                // Check if the element above has density AND is denser than this liquid
+                if (densityObtained && aboveTargetDensity > this->getDensity()) {
+                    yieldToElementAbove = true; // Yield to the denser falling element
+                }
             }
 
-            // Check if original spot was empty
-            Element* originalTargetElement = world.getElement(r, check_c);
+            // Check if target spot in nextGrid is already claimed OR if we should yield
+            if (world.getElementFromNext(check_r, check_c) || yieldToElementAbove) {
+                // If claimed OR denser element is above, water cannot flow here horizontally this step.
+                break; // Stop checking further in this direction
+            }
+
+			// Hits here if the target cell is empty and not blocked by a denser element above
+            // Now check if the original spot was empty (only move into originally empty spots horizontally)
+            Element* originalTargetElement = world.getElement(check_r, check_c);
+			// Move to closest empty spot if found
             if (!originalTargetElement) {
                 // Found a potential empty spot! Is it the closest so far?
                 if (step < min_dist) {
                     min_dist = step;
                     best_h_move_c = check_c;
                 }
-                // Even if found, continue checking closer spots on the other side
-                // So, don't break the inner step loop here.
+                // Continue checking on this side, maybe find closer on other side
             }
             else {
                 // Hit a non-empty original cell, stop checking further this direction
                 break;
             }
         }
-        // Optimization: If we found a move on the first side, we don't *need*
-        // to check the other side for an equally close or closer spot,
-        // as tryMoveOrSwap gives priority based on call order. But checking
-        // both ensures we find the *absolute* closest if desired.
-        // Let's keep checking both for now.
-        horiz_dir *= -1; // Flip direction
+
+        // Optimization: If we found the closest possible move (step 1), no need to check other side.
+        if (min_dist == 1) break;
+
+        horiz_dir *= -1; // Flip direction to check other side
     }
 
     // After checking both sides, if we found a valid target column:
     if (best_h_move_c != c) {
         // Attempt the move to the best (closest) spot found
-        // tryMoveOrSwap will do the final atomic check on nextGrid availability
         if (world.tryMoveOrSwap(r, c, r, best_h_move_c)) {
             return true; // Moved horizontally
         }
@@ -106,10 +124,12 @@ bool Liquid::attemptFlow(World& world, int r, int c) {
     // --- No Movement ---
     return false;
 }
+
 /**
  * @brief Attempts to evaporate the liquid based on temperature and conditions.
  * Checks temperature against boiling point, checks space above, and potentially
  * replaces this liquid element with its gas form via the World object's nextGrid.
+ * 
  * Should be called by the derived class's update() method.
  * @param world Reference to the world grid and its methods.
  * @param r Current row.
@@ -128,15 +148,15 @@ bool Liquid::attemptEvaporation(World& world, int r, int c) {
     Element* elementAbove = world.getElement(above_r, above_c); // Check current grid for space
 
     // Allow evaporation into empty space or existing gas
-    // (Could refine this - maybe only if the gas above is the *same* gas type?)
+    // TODO: Could refine this - maybe only if the gas above is the *same* gas type?
     bool spaceAbove = !elementAbove || dynamic_cast<Gas*>(elementAbove);
 
     if (!spaceAbove) {
         return false; // Blocked above
     }
 
-    // 3. Probability Check (Example: 5% chance per tick if conditions met)
-    const int EVAPORATION_CHANCE = 5; // Percent
+    // 3. Probability Check (default 20% chance per tick if conditions met)
+    const int EVAPORATION_CHANCE = 20; // Percent
     if ((rand() % 100) >= EVAPORATION_CHANCE) {
         return false; // Didn't evaporate this tick
     }
@@ -153,9 +173,6 @@ bool Liquid::attemptEvaporation(World& world, int r, int c) {
     if (newGasElement) {
         // Place the new gas element into the NEXT grid at the current position
         world.setNextElement(r, c, std::move(newGasElement));
-        // Note: The original liquid unique_ptr in m_grid[r][c] will be implicitly
-        // handled later - either moved over if stationary or discarded if source moved.
-        // By placing the gas in m_nextGrid[r][c], we ensure it replaces the liquid.
         return true; // Evaporation successful
     }
 

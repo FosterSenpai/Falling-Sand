@@ -4,18 +4,19 @@
 // Author:      Foster Rae
 // Date Created:2025-04-23
 // Last Update: 2025-04-23
-// Version:     1.6
+// Version:     1.7
 // Description: Header file for the Game class. 
 //              Handles the main game loop, window management, input handling,
 //              UI display and rendering.
 // ============================================================================
+
 #pragma once
 
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
-#include "World.h" // Game contains a World
-#include "Particle.h" // Include ParticleType definition
+#include "World.h"
+#include "Particle.h"
 
 class Game
 {
@@ -36,7 +37,7 @@ public:
 
 private:
 	// **=== Private Members ===**
-    // -- Config / Base Variables First --
+    // -- Config / Base Variables --
     float m_cellWidth;
     unsigned int m_windowWidth;
     unsigned int m_windowHeight;
@@ -83,7 +84,7 @@ private:
 	 * @param mouseGridX The grid column index where the mouse is located.
 	 * @param mouseGridY The grid row index where the mouse is located.
      */
-    void placeParticles(int mouseGridX, int mouseGridY); // Logic for placing particles
+    void placeParticles(int mouseGridX, int mouseGridY);
 
     /**
 	 * @brief Updates the overall game state for the current frame. Calls the world update method and UI updates.
@@ -96,17 +97,17 @@ private:
     void render();
 
     /**
-	 * @brief Updates the content of m_uiText with the ui information.
+	 * @brief Updates the UI with the current info.
      */
     void updateUIText();
 
     /**
-	 * @brief Prepares the vertex array for drawing the grid.
+	 * @brief Iterates through the grid and prepares the vertex array for rendering.
      */
     void prepareVertices();
 
     /**
-	 * @brief Loads the resources needed for the game (fonts, textures, etc.). (Just font right now)
+	 * @brief Loads the resources needed for the game (fonts, textures, etc.), and sets up the UI.
      */
     void loadResources();
     

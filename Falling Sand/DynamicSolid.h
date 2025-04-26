@@ -3,8 +3,8 @@
 // File:        DynamicSolid.h
 // Author:      Foster Rae
 // Date Created:2025-04-25
-// Last Update: 2025-04-25 // Updated date
-// Version:     1.1 // Incremented version
+// Last Update: 2025-04-25
+// Version:     1.2
 // Description: Header file for the DynamicSolid abstract class.
 //              Inherits from Solid and serves as a base for solid elements
 //              that are typically affected by gravity and can move
@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "Solid.h" // Include the base class definition
+#include "Solid.h"
 
 // Forward declaration of World
 class World;
@@ -22,8 +22,9 @@ class World;
  * @brief Abstract intermediate class representing dynamic (movable) Solids.
  *
  * Inherits the Solid interface. Base class for elements like Sand and Silt
- * that typically fall due to gravity. Concrete derived classes must implement
- * the pure virtual functions. Provides helpers and interfaces for fall/slide behaviour.
+ * that typically fall due to gravity. 
+ *
+ * Provides helpers and interfaces for fall/slide behaviour.
  */
 class DynamicSolid : public Solid {
 public:
@@ -41,7 +42,6 @@ public:
     virtual float getMeltingPoint() const = 0;
     virtual ParticleType getLiquidForm() const = 0;
     virtual ParticleType getGasForm() const = 0;
-    // Inherits providesSupport() and isFlammable() virtuals from Solid
 
 
     // **=== Movement Behaviour Customization ===**
@@ -63,17 +63,10 @@ protected:
      * @brief Attempts to perform standard dynamic solid falling logic.
      * Checks below, then potentially diagonally below (if canSlideDiagonally() is true),
      * attempting to move into empty space or displace lighter elements.
-     * Should be called by the derived class's update() method.
-     * (Implementation would go in DynamicSolid.cpp).
      * @param world Reference to the world grid.
      * @param r Current row.
      * @param c Current column.
      * @return true if the solid successfully moved or attempted to move, false otherwise.
      */
-    virtual bool attemptFall(World& world, int r, int c); // Declaration only
-
-
-private:
-    // **=== Private Members ===**
-
+    virtual bool attemptFall(World& world, int r, int c);
 };

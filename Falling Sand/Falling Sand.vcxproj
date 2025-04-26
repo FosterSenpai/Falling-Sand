@@ -137,7 +137,6 @@
   <ItemGroup>
     <ClCompile Include="DirtElement.cpp" />
     <ClCompile Include="DynamicSolid.cpp" />
-    <ClCompile Include="Element.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Gas.cpp" />
     <ClCompile Include="GrassElement.cpp" />
@@ -145,7 +144,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OLD.cpp" />
     <ClCompile Include="SandElement.cpp" />
-    <ClCompile Include="Solid.cpp" />
     <ClCompile Include="StaticSolid.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="WaterElement.cpp" />

@@ -3,8 +3,8 @@
 // File:        Element.h
 // Author:      Foster Rae
 // Date Created:2025-04-25
-// Last Update: 2025-04-25
-// Version:     1.4
+// Last Update: 2025-04-26
+// Version:     1.5
 // Description: Header file for the Element abstract base class.
 //              Defines the common interface and fundamental properties
 //              (temperature, velocity, age, simulation flags)
@@ -25,7 +25,7 @@ class World;
 class Element {
 public:
     // **=== Constants ===**
-    static constexpr float DEFAULT_TEMPERATURE = 20.0f; // Example: degrees Celsius
+	static constexpr float DEFAULT_TEMPERATURE = 20.0f; // Default temperature in Celsius
 
     // **=== Destructor ===**
 
@@ -73,7 +73,7 @@ public:
      */
     virtual void addHeat(float amount) {
         temperature += amount;
-        // this->wakeUp(); // Potentially wake up on temp change
+        this->wakeUp(); // wake up on temp change
     }
 
     /**
@@ -136,7 +136,7 @@ public:
     }
 
 
-protected: // Accessible by derived classes
+protected:
     // **=== Protected Members ===**
     int age = 0;
 
@@ -157,8 +157,4 @@ protected: // Accessible by derived classes
      * Reset at the start of each tick, set to true when update is complete for this element.
      */
     bool updatedThisTick = false;
-
-
-private:
-    // **=== Private Members ===**
 };

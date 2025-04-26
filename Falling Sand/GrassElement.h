@@ -35,11 +35,6 @@ public:
     sf::Color getColor() const override;
     ParticleType getType() const override;
     float getDensity() const override;
-    float getHardness() const override;
-    float getThermalConductivity() const override;
-    float getMeltingPoint() const override;
-    ParticleType getLiquidForm() const override;
-    ParticleType getGasForm() const override;
 
     // Inherits providesSupport() (true), isFlammable() (false - default, maybe override?),
     // requiresSupport() (false) from Solid/StaticSolid.

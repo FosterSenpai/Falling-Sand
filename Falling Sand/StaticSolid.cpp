@@ -4,13 +4,13 @@
 // Author:      Foster Rae
 // Date Created:2025-04-26
 // Last Update: 2025-04-26
-// Version:     1.0
+// Version:     1.1
 // Description: Implementation file for the StaticSolid abstract class.
 //              May contain common logic/helpers for static solids later.
 // ============================================================================
 
 #include "StaticSolid.h"
-#include "World.h" // Include World if needed for future logic
+#include "World.h"
 
 // **=== Protected Helper Methods ===**
 
@@ -29,11 +29,9 @@ void StaticSolid::checkEnvironment(World& world, int r, int c) {
     // Derived classes like DirtElement/GrassElement currently handle
     // their own environment checks directly in their update() methods.
     // Common logic could be added here later if needed.
-    (void)world; // Mark parameters as unused to prevent compiler warnings
+
+    // Mark parameters as unused to prevent compiler warnings while empty
+    (void)world;
     (void)r;
     (void)c;
 }
-
-// NOTE: No implementations needed for the pure virtual functions here,
-// as StaticSolid remains abstract. Those are implemented by concrete
-// classes like DirtElement and GrassElement.

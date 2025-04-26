@@ -3,29 +3,26 @@
 // File:        World.cpp
 // Author:      Foster Rae
 // Date Created:2025-04-23
-// Last Update: 2025-04-25 // Updated date
-// Version:     1.2 // Updated version
+// Last Update: 2025-04-26
+// Version:     1.5
 // Description: Implementation file for the World class. Manages the grid
 //              of Elements and the simulation update cycle.
 // ============================================================================
 
 #include "World.h"
 #include <vector>
-#include <memory>       // For std::unique_ptr, std::make_unique
-#include <stdexcept>    // For std::invalid_argument, std::out_of_range
-#include <utility>      // For std::move, std::swap
-#include <cstdlib>      // For rand()
-#include <iostream> // Make sure included
-constexpr int DEBUG_ROW = 100; // Choose a row where sand might hit water
-constexpr int DEBUG_COL = 100; // Choose a column
-// Include headers for concrete Element types as they are created:
+#include <memory>
+#include <stdexcept>
+#include <utility>
+#include <cstdlib>
+
+// **=== Element Includes ===**
 #include "SandElement.h"
 #include "Liquid.h"
 #include "Gas.h"
 #include "DirtElement.h"
 #include "GrassElement.h"
 #include "WaterElement.h"
-// ... etc ...
 
 
 // **=== Constructors & Destructors ===**
@@ -36,23 +33,17 @@ World::World(int numRows, int numCols) : m_rows(numRows), m_cols(numCols), m_swe
         throw std::invalid_argument("World dimensions (rows, cols) must be positive.");
     }
 
-    // --- Revised Grid Initialization ---
-    // Create the outer vector with the correct number of rows
+    // --- Grid Initialization ---
     m_grid.resize(m_rows);
     m_nextGrid.resize(m_rows);
-
-    // Initialize each inner vector (row) separately
     for (int i = 0; i < m_rows; ++i) {
-        // Resize each row vector to the correct number of columns.
-        // Elements (unique_ptr) will be default-constructed to nullptr.
         m_grid[i].resize(m_cols);
         m_nextGrid[i].resize(m_cols);
     }
-    // --- End of Revised Grid Initialization ---
 }
 
 // **=== Public Getters ===**
-// (getRows, getCols, getGridState, isWithinBounds, getElement, getElementFromNext, getElementType - implemented previously)
+
 int World::getRows() const { return m_rows; }
 int World::getCols() const { return m_cols; }
 const std::vector<std::vector<std::unique_ptr<Element>>>& World::getGridState() const { return m_grid; }
@@ -64,104 +55,64 @@ ParticleType World::getElementType(int r, int c) const { Element* element = getE
 
 // **=== Element Creation ===**
 
-/**
- * @brief Creates and places a new element of the specified type at (r, c)
- * in the main grid (m_grid), replacing any existing element.
- * @param r The row index.
- * @param c The column index.
- * @param type The ParticleType of the element to create.
- */
 void World::setElementByType(int r, int c, ParticleType type) {
-    if (!isWithinBounds(r, c)) {
-        // Optionally throw an error or just return if out of bounds
-        // For now, let's throw, consistent with old setParticle
+	if (!isWithinBounds(r, c)) { // Check bounds
         throw std::out_of_range("Coordinates [" + std::to_string(r) + "," + std::to_string(c) + "] are out of bounds in setElementByType.");
-        // return;
     }
-
-    // Use the factory method to create the element
-    std::unique_ptr<Element> newElement = createElementByType(type);
-
-    // Move the new element into the main grid, replacing the old one.
-    // std::move transfers ownership of the pointer.
-    m_grid[r][c] = std::move(newElement);
-
-    // Ensure the corresponding nextGrid cell is cleared if we replace mid-update?
-    // Or assume this is usually called during setup/input handling.
-    // For safety, clearing nextGrid might be good IF setElementByType
-    // could be called during the main update loop externally.
-    // m_nextGrid[r][c] = nullptr;
+    
+	// Create a new element of the specified type
+	std::unique_ptr<Element> newElement = createElementByType(type); // Create the element
+	m_grid[r][c] = std::move(newElement);                            // Move it's unique_ptr to the grid
 }
-
-
-// **=== Private Methods ===**
-
-// Inside World.cpp
-
-// ... (Includes, Constructor, Getters, Element Creation, Interaction Methods like move/swap) ...
 
 
 // **=== Main Simulation Update ===**
 
-/**
- * @brief Advances the simulation state by one frame/tick.
- * Manages the update cycle for all elements in the grid using double buffering.
- */
 void World::update() {
     // --- Step 0: Process Placement Requests ---
-    // Apply requested placements BEFORE the simulation tick starts.
-    // This places them directly into the current m_grid.
     for (const auto& request : m_placementRequests) {
-        setElementByType(request.r, request.c, request.type); // Use existing method
+        setElementByType(request.r, request.c, request.type);
     }
-    m_placementRequests.clear(); // Clear buffer for next frame
+    m_placementRequests.clear();
 
     // --- Step 1: Prepare for the new tick ---
-
-    // Reset update flags for all elements in the current grid (m_grid)
-    // Also clear the nextGrid entirely to ensure it starts empty.
-    // (We could combine clearing nextGrid with the reset loop later if needed)
+	// Clear the next grid and reset update flags
     for (int r = 0; r < m_rows; ++r) {
         for (int c = 0; c < m_cols; ++c) {
-            if (m_grid[r][c]) { // Check if element exists
+            if (m_grid[r][c]) {
                 m_grid[r][c]->resetUpdateFlag();
             }
-            // Ensure next grid starts clean for this tick
-            // (Could also be done after the swap at the end of the *previous* tick)
             m_nextGrid[r][c] = nullptr;
         }
     }
 
-
     // --- Step 2: Update active elements ---
-    // Iterate BOTTOM-UP
-    for (int r = m_rows - 1; r >= 0; --r) {
-        // ALTERNATE column direction based on the flag
+    for (int r = m_rows - 1; r >= 0; --r) { // Iterate from bottom row upwards
+        // Alternate column direction based on m_sweepRight
         if (m_sweepRight) {
             // Sweep Left-to-Right
             for (int c = 0; c < m_cols; ++c) {
                 Element* element = m_grid[r][c].get();
-                if (element && element->isAwake() && !element->isUpdatedThisTick()) {
+                if (element && !element->isUpdatedThisTick()) {
                     element->update(*this, r, c);
                 }
             }
         }
         else {
             // Sweep Right-to-Left
-            for (int c = m_cols - 1; c >= 0; --c) { // Note the loop changes
+            for (int c = m_cols - 1; c >= 0; --c) {
                 Element* element = m_grid[r][c].get();
-                if (element && element->isAwake() && !element->isUpdatedThisTick()) {
+                if (element && !element->isUpdatedThisTick()) {
                     element->update(*this, r, c);
                 }
             }
         }
     }
-
     // Toggle sweep direction for the NEXT frame
     m_sweepRight = !m_sweepRight;
 
     // --- Step 3: Handle stationary elements ---
-    // (This loop can remain left-to-right, its order is less critical)
+	// Copy any stationary elements from m_grid to m_nextGrid
     for (int r = 0; r < m_rows; ++r) {
         for (int c = 0; c < m_cols; ++c) {
             if (m_grid[r][c] && !m_nextGrid[r][c]) {
@@ -170,74 +121,100 @@ void World::update() {
         }
     }
 
-
     // --- Step 4: Swap grids ---
     m_grid.swap(m_nextGrid);
-
-
 }
 
 void World::requestPlacement(int r, int c, ParticleType type) {
-    // Could add checks here if needed (e.g., limit buffer size)
     m_placementRequests.push_back({ r, c, type });
 }
 
-// **=== Element Interaction Methods (Implementation) ===**
-// Inside World::tryMoveOrSwap in World.cpp
+// **=== Element Interaction Methods ===**
+
 bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
-    // 1. Bounds checks
+    // Bounds checks
     if (!isWithinBounds(r_from, c_from) || !isWithinBounds(r_to, c_to)) {
         return false;
     }
-    // 2. Check source
+
+	// Check if the source cell is empty
     if (!m_grid[r_from][c_from]) {
         return false; // Cannot move nothing
     }
+
+	// Get the element that is being moved
     Element* moverElement = m_grid[r_from][c_from].get();
+    if (!moverElement) return false; // Safety check
 
-    // 3. Check target cell in NEXT grid atomically
-    if (m_nextGrid[r_to][c_to]) {
-        return false; // Target spot already claimed this tick
-    }
-
-    // 4. Check original target in m_grid
+    // Check original target in m_grid first
     Element* originalTargetElement = getElement(r_to, c_to);
+
+    // Check target cell in NEXT grid (for conflict detection)
+	Element* claimedNextElement = m_nextGrid[r_to][c_to].get(); // Get whats in the next grid target cell
+	bool targetClaimed = claimedNextElement != nullptr;         // If empty, targetClaimed is false
 
     // --- Case A: Original Target was Empty ---
     if (!originalTargetElement) {
-        m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]); // MOVE
+        // Can only move here if the spot hasn't already been claimed in nextGrid
+        if (targetClaimed) {
+			return false; // Block, target already claimed in nextGrid
+        }
+
+		// Perform the move
+        m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);
         wakeNeighbors(r_from, c_from);
         wakeNeighbors(r_to, c_to);
-        if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); }
+		if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); } // Wake up the moved element
         return true;
     }
+
     // --- Case B: Original Target was Occupied ---
     else {
-        // Get mover's density SAFELY
-        float moverDensity = 0.0f;
+        // If the target spot in nextGrid is already claimed by something
+        // *other* than the particle originally there, then it's a conflict.
+        // This prevents overwriting a completed move/swap by another particle.
+        if (targetClaimed && claimedNextElement != originalTargetElement) {
+            return false; // Blocked by a third-party claim/move into the target spot
+        }
+
+        // If we passed the check above, the target spot in nextGrid is either
+        // empty (targetClaimed is false) OR claimed by the original target element itself.
+
+		// -- Check if original target is a displaceable Liquid --
+        float moverDensity = 0.0f; // Get mover density safely
         bool densityObtained = false;
+		// Get the density of the mover element for each type
         if (Solid* solidMover = dynamic_cast<Solid*>(moverElement)) { moverDensity = solidMover->getDensity(); densityObtained = true; }
         else if (Liquid* liquidMover = dynamic_cast<Liquid*>(moverElement)) { moverDensity = liquidMover->getDensity(); densityObtained = true; }
         else if (Gas* gasMover = dynamic_cast<Gas*>(moverElement)) { moverDensity = gasMover->getDensity(); densityObtained = true; }
-        if (!densityObtained) return false; // Mover has no density defined
+        if (!densityObtained) return false; // Should not happen
 
-        // Check if original target is a displaceable fluid
-        float targetDensity = 0.0f;
+		// Fluid density check for if original target is a fluid (Liquid or Gas)
+        float targetDensity = 0.0f; // Get target density if fluid
         bool isFluid = false;
         if (Liquid* liquidTarget = dynamic_cast<Liquid*>(originalTargetElement)) { isFluid = true; targetDensity = liquidTarget->getDensity(); }
         else if (Gas* gasTarget = dynamic_cast<Gas*>(originalTargetElement)) { isFluid = true; targetDensity = gasTarget->getDensity(); }
 
+
+        // --- Density Check ---
         if (isFluid && moverDensity > targetDensity) {
             // Perform the SWAP
-            m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);     // Mover (A) goes to target spot in next
-            m_nextGrid[r_from][c_from] = std::move(m_grid[r_to][c_to]);   // Target (W) goes to mover's original spot in next
+			std::unique_ptr<Element> originalTargetPtr = std::move(m_grid[r_to][c_to]); // Store original target before moving
+			m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);                 // Move the mover to target cell
+            // Only move target back if the source spot wasn't claimed by something else
+            if (!m_nextGrid[r_from][c_from]) {
+                m_nextGrid[r_from][c_from] = std::move(originalTargetPtr);   // Target takes mover's original spot in next
+            }
+            else {
+                // Displaced fluid is lost if source spot taken. originalTargetPtr is deleted.
+            }
 
             // Wake up relevant particles
             wakeNeighbors(r_from, c_from);
             wakeNeighbors(r_to, c_to);
-            if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); }     // Wake mover
-            if (m_nextGrid[r_from][c_from]) { m_nextGrid[r_from][c_from]->wakeUp(); } // Wake displaced fluid
-            return true;
+            if (m_nextGrid[r_to][c_to]) { m_nextGrid[r_to][c_to]->wakeUp(); }
+            if (m_nextGrid[r_from][c_from]) { m_nextGrid[r_from][c_from]->wakeUp(); }
+            return true; // Swap succeeded
         }
         else {
             // Blocked by solid or denser/equal fluid
@@ -246,133 +223,63 @@ bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
     }
 }
 
+// --- Other World Member Functions ---
+
 void World::setNextElement(int r, int c, std::unique_ptr<Element> element) {
-    if (isWithinBounds(r, c)) {
-        m_nextGrid[r][c] = std::move(element);
+	if (isWithinBounds(r, c)) { // Check bounds
+		m_nextGrid[r][c] = std::move(element); // Move the element into the next grid
     }
-    // Else: Out of bounds - maybe log an error? For now, do nothing.
 }
 
 void World::clearNextGridCell(int r, int c) {
-    if (isWithinBounds(r, c)) {
-        m_nextGrid[r][c] = nullptr;
+	if (isWithinBounds(r, c)) { // Check bounds
+		m_nextGrid[r][c] = nullptr; // Clear the cell in the next grid
     }
 }
 
 void World::moveElementToNext(int r_from, int c_from, int r_to, int c_to) {
-    if (!isWithinBounds(r_from, c_from) || !isWithinBounds(r_to, c_to)) {
-        // Log error or handle invalid move?
-        return;
+	if (!isWithinBounds(r_from, c_from) || !isWithinBounds(r_to, c_to)) { // Check bounds of both cells
+		return; // Cannot move out of bounds
     }
-    // Check if source element exists
-    if (!m_grid[r_from][c_from]) {
-        // Trying to move an empty cell? Log error or ignore.
-        return;
+	if (!m_grid[r_from][c_from]) { // Check if the source cell is empty
+		return; // Cannot move nothing
     }
-
-    // Move the unique_ptr from the current grid's source cell
-    // to the next grid's target cell. This transfers ownership.
-    // The unique_ptr at m_grid[r_from][c_from] becomes nullptr after the move.
-    m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]);
-
-    // We don't explicitly clear m_nextGrid[r_from][c_from] here,
-    // because something else might move *into* that spot later in the tick.
-    // If nothing moves into it, it should remain nullptr (its default state).
+	m_nextGrid[r_to][c_to] = std::move(m_grid[r_from][c_from]); // Move the element to the next grid
 }
 
 void World::swapElementsInNext(int r1, int c1, int r2, int c2) {
-    if (!isWithinBounds(r1, c1) || !isWithinBounds(r2, c2)) {
-        // Log error or handle invalid swap?
+    //TODO: Check if actually using this func
+	if (!isWithinBounds(r1, c1) || !isWithinBounds(r2, c2)) { // Check bounds of both cells
         return;
     }
-
-    // Check if source elements exist (optional, depends on calling context)
-    // if (!m_grid[r1][c1] || !m_grid[r2][c2]) { return; }
-
-   // Move element from (r1, c1) in m_grid -> (r2, c2) in m_nextGrid
-    m_nextGrid[r2][c2] = std::move(m_grid[r1][c1]);
-
-    // Move element from (r2, c2) in m_grid -> (r1, c1) in m_nextGrid
-    m_nextGrid[r1][c1] = std::move(m_grid[r2][c2]);
-
+	m_nextGrid[r2][c2] = std::move(m_grid[r1][c1]); // Move the element from r1,c1 to r2,c2
+	m_nextGrid[r1][c1] = std::move(m_grid[r2][c2]); // Move the element from r2,c2 to r1,c1
 }
 
+// **=== Factory for Creating Elements ===**
+
 std::unique_ptr<Element> World::createElementByType(ParticleType type) {
+	// Create a new element based on the ParticleType
     switch (type) {
-    case ParticleType::EMPTY:
-        return nullptr; // Represent empty cells with nullptr
-
-        // --- Add cases for each concrete element type as they are created ---
-
-        case ParticleType::SAND:
-            return std::make_unique<SandElement>();
-        case ParticleType::DIRT:
-            return std::make_unique<DirtElement>();
-        case ParticleType::GRASS:
-            return std::make_unique<GrassElement>();
-        case ParticleType::WATER:
-			return std::make_unique<WaterElement>();
-		/*
-        case ParticleType::WATER:
-            // Requires WaterElement class to be defined and WaterElement.h included
-            // return std::make_unique<WaterElement>();
-            return nullptr; // Placeholder
-
-        case ParticleType::DIRT:
-             // Requires DirtElement class ...
-             // return std::make_unique<DirtElement>();
-             return nullptr; // Placeholder
-
-        case ParticleType::GRASS:
-             // Requires GrassElement class ...
-             // return std::make_unique<GrassElement>();
-             return nullptr; // Placeholder
-
-        case ParticleType::SANDWET:
-             // Requires SandWetElement class ...
-             // return std::make_unique<SandWetElement>();
-             return nullptr; // Placeholder
-
-        case ParticleType::SILT:
-             // Requires SiltElement class ...
-             // return std::make_unique<SiltElement>();
-             return nullptr; // Placeholder
-
-        case ParticleType::OIL:
-             // Requires OilElement class ...
-             // return std::make_unique<OilElement>();
-             return nullptr; // Placeholder
-        */
-
-        // Add cases for future types (STEAM, STONE, WOOD, etc.) here
-
-    default:
-        // Handle unknown types - return nullptr or throw an error?
-        // Returning nullptr is safer if new types might be added without updating this.
-        return nullptr;
+    case ParticleType::EMPTY:   return nullptr;
+    case ParticleType::SAND:    return std::make_unique<SandElement>();
+    case ParticleType::DIRT:    return std::make_unique<DirtElement>();
+    case ParticleType::GRASS:   return std::make_unique<GrassElement>();
+    case ParticleType::WATER:   return std::make_unique<WaterElement>();
+    default:                    return nullptr;
     }
 }
 
-/**
- * @brief Wakes up elements in a larger neighborhood around the given cell.
- * Used to ensure nearby elements re-evaluate their state after movement occurs.
- * @param r Central row index.
- * @param c Central column index.
- */
 void World::wakeNeighbors(int r, int c) {
-    // Iterate through a 5x5 neighborhood centered on (r, c)
-    for (int dr = -2; dr <= 2; ++dr) { // <--- Changed radius to 2
-        for (int dc = -2; dc <= 2; ++dc) { // <--- Changed radius to 2
-            // Skip the center cell itself
-            if (dr == 0 && dc == 0) continue;
-
+	for (int dr = -2; dr <= 2; ++dr) {     // Check rows range -2 to 2
+		for (int dc = -2; dc <= 2; ++dc) { // Check columns range -2 to 2
+			if (dr == 0 && dc == 0) continue; // Skip self
+			// Calculate neighbor coordinates
             int nr = r + dr;
             int nc = c + dc;
-
-            // Check bounds and get element from the *current* grid (m_grid)
-            Element* neighbor = getElement(nr, nc); // Use existing getter
-            if (neighbor) { // If neighbor exists
-                neighbor->wakeUp(); // Call its wakeUp method
+			Element* neighbor = getElement(nr, nc); // Get the neighbor element
+			if (neighbor) {         // If the neighbor exists
+				neighbor->wakeUp(); // Wake it up
             }
         }
     }
