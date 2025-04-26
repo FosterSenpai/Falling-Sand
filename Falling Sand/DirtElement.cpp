@@ -45,8 +45,8 @@ void DirtElement::update(World& world, int r, int c) {
                 // Calculate distance/depth of this block from the surface
                 int surfaceDistance = (surfaceHeight < world.getRows()) ? (r - surfaceHeight + 1) : 0;
 
-                // Determine the random maximum growth depth (2-5 layers)
-                int randomMaxGrowthDepth = 2 + (rand() % 5);
+                // Determine the random maximum growth depth (1-5 layers)
+                int randomMaxGrowthDepth = 1 + (rand() % 5);
 
                 // Check if this dirt block is within the allowed random depth
                 if (surfaceDistance > 0 && surfaceDistance <= randomMaxGrowthDepth) {
@@ -83,7 +83,7 @@ void DirtElement::update(World& world, int r, int c) {
     // --- Static Element Sleep & Update Mark ---
     if (!becameGrass) {
         if (!isEffectivelyExposed) {
-            this->potentiallyGoToSleep();
+            //this->potentiallyGoToSleep();
         }
         else {
             this->wakeUp();
