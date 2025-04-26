@@ -87,6 +87,15 @@ public:
 
 
     // -- Getters --
+     /**
+     * @brief Get the pre-calculated surface height for a given column.
+     * The surface height is the row index of the first non-empty cell from the top (0).
+     * Returns numRows if the column is empty.
+     * @param c The column index.
+     * @return int The row index of the highest element, or numRows if empty.
+     */
+    int getSurfaceHeight(int c) const;
+
     /**
      * @brief Gets a pointer to the element in the current grid (m_grid).
      *
@@ -216,6 +225,8 @@ private:
     int m_rows;
     /** @brief Number of columns in the simulation grid. */
     int m_cols;
+    /** @brief Stores the calculated row index of the highest non-empty element in each column. */
+    std::vector<int> m_surfaceHeights;
 
     // -- Update Logic State --
     /** @brief Tracks the column sweep direction for the update loop (alternates each frame). */
@@ -223,6 +234,12 @@ private:
 
 
     // **=== Private Methods ===**
+
+    /**
+     * @brief Calculates the surface height for all columns and stores it in m_surfaceHeights.
+     * Should be called once at the beginning of the World::update cycle.
+     */
+    void calculateSurfaceHeights();
 
     /**
      * @brief Wakes up elements in a neighborhood around the given cell.

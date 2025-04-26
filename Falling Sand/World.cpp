@@ -27,7 +27,7 @@
 
 // **=== Constructors & Destructors ===**
 
-World::World(int numRows, int numCols) : m_rows(numRows), m_cols(numCols), m_sweepRight(true) {
+World::World(int numRows, int numCols) : m_rows(numRows), m_cols(numCols), m_sweepRight(true), m_surfaceHeights(numCols, numRows) {
     // Validate dimensions
     if (m_rows <= 0 || m_cols <= 0) {
         throw std::invalid_argument("World dimensions (rows, cols) must be positive.");
@@ -44,6 +44,13 @@ World::World(int numRows, int numCols) : m_rows(numRows), m_cols(numCols), m_swe
 
 // **=== Public Getters ===**
 
+int World::getSurfaceHeight(int c) const {
+    if (c >= 0 && c < m_cols) {
+        return m_surfaceHeights[c];
+    }
+    // Out of bounds, return a value indicating empty/bottom
+    return m_rows;
+}
 int World::getRows() const { return m_rows; }
 int World::getCols() const { return m_cols; }
 const std::vector<std::vector<std::unique_ptr<Element>>>& World::getGridState() const { return m_grid; }
@@ -76,6 +83,8 @@ void World::update() {
     m_placementRequests.clear();
 
     // --- Step 1: Prepare for the new tick ---
+	// Calculate surface heights for the current grid
+    calculateSurfaceHeights();
 	// Clear the next grid and reset update flags
     for (int r = 0; r < m_rows; ++r) {
         for (int c = 0; c < m_cols; ++c) {
@@ -130,6 +139,18 @@ void World::requestPlacement(int r, int c, ParticleType type) {
 }
 
 // **=== Element Interaction Methods ===**
+
+void World::calculateSurfaceHeights() {
+    for (int c = 0; c < m_cols; ++c) {
+        m_surfaceHeights[c] = m_rows; // Default to bottom (empty column)
+        for (int r = 0; r < m_rows; ++r) {
+            if (m_grid[r][c]) { // Found the first non-empty cell from the top
+                m_surfaceHeights[c] = r;
+                break; // Stop scanning down this column
+            }
+        }
+    }
+}
 
 bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
     // Bounds checks

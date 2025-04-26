@@ -103,11 +103,11 @@ private:
     /**
      * @brief Minimum time (in ticks) grass must be covered by non-grass/non-air before potentially dying.
      */
-    static constexpr int GRASS_DEATH_TIME_THRESHOLD = 150; // Added: Adjust as needed (e.g., 100 ticks = ~1.6s at 60fps)
+    static constexpr int GRASS_DEATH_TIME_THRESHOLD = 150;
 
     /**
      * @brief Tracks how long (in ticks) this grass particle has been covered
      * by a non-grass/non-air element continuously. Resets if uncovered or covered by grass.
      */
-    int m_timeSinceCovered; // Added
+    int m_timeSinceCovered;
 };
