@@ -142,7 +142,6 @@
     <ClCompile Include="GrassElement.cpp" />
     <ClCompile Include="Liquid.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="OLD.cpp" />
     <ClCompile Include="SandElement.cpp" />
     <ClCompile Include="StaticSolid.cpp" />
     <ClCompile Include="Utils.cpp" />
