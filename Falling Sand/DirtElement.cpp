@@ -21,7 +21,9 @@
 
 // **=== Constructors ===**
 
-DirtElement::DirtElement() : m_timeSinceExposed(0) {}
+DirtElement::DirtElement() : m_timeSinceExposed(0) {
+	initializeColorVariation(getColor());
+}
 
 // **=== Overridden Public Methods ===**
 

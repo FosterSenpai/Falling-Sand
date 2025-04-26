@@ -15,6 +15,11 @@
 #include <memory>
 #include <cstdlib>
 
+// **=== Constructor ===**
+SandElement::SandElement() {
+    initializeColorVariation(getColor());
+}
+
 // **=== Overridden Public Methods ===**
 
 void SandElement::update(World& world, int r, int c) {

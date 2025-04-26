@@ -244,49 +244,37 @@ void Game::updateUIText() {
 }
 
 void Game::prepareVertices() {
-    // Clear the previous frame vertices
     m_gridVertices.clear();
-
-    // Get ref to current grid
     const auto& currentGrid = m_world.getGridState();
 
-    // Iterate through all cells in grid
     for (int r = 0; r < m_gridRows; ++r) {
         for (int c = 0; c < m_gridCols; ++c) {
-
-            // Get the unique_ptr reference from the grid
             const std::unique_ptr<Element>& elementPtr = currentGrid[r][c];
-
-            // Check if the pointer is valid (not nullptr)
             if (elementPtr) {
-                // Get the pointer to use
                 Element* element = elementPtr.get();
 
-                // Get color using the element's virtual method
-                sf::Color particleColor = element->getColor();
+                // *** CHANGE HERE ***
+                // Get the specific varied color for this particle instance
+                sf::Color particleColor = element->getRenderColor(); // Use the new getter
 
-                // Calculate the screen coordinates of the cell's corners
                 float left = static_cast<float>(c) * m_cellWidth;
                 float top = static_cast<float>(r) * m_cellWidth;
                 float right = left + m_cellWidth;
                 float bottom = top + m_cellWidth;
 
+                // Create vertices with the varied color
                 sf::Vertex topLeft(sf::Vector2f(left, top), particleColor);
                 sf::Vertex topRight(sf::Vector2f(right, top), particleColor);
                 sf::Vertex bottomLeft(sf::Vector2f(left, bottom), particleColor);
                 sf::Vertex bottomRight(sf::Vector2f(right, bottom), particleColor);
 
-                // Append vertices for the two triangles
-				// Triangle 1
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(topRight);
                 m_gridVertices.append(bottomRight);
-				// Triangle 2
                 m_gridVertices.append(topLeft);
                 m_gridVertices.append(bottomRight);
                 m_gridVertices.append(bottomLeft);
             }
-            // If elementPtr is nullptr, we just skip rendering this cell (it's empty)
         }
     }
 }

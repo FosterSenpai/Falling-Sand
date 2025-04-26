@@ -4,7 +4,7 @@
 // Author:      Foster Rae
 // Date Created:2025-04-26
 // Last Update: 2025-04-26
-// Version:     1.1 // Updated version
+// Version:     1.1
 // Description: Implementation file for the GrassElement class.
 // ============================================================================
 
@@ -18,7 +18,9 @@
 #include "DirtElement.h"
 
 // **=== Constructor ===**
-GrassElement::GrassElement() : m_timeSinceCovered(0) {}
+GrassElement::GrassElement() : m_timeSinceCovered(0) {
+    initializeColorVariation(getColor());
+}
 
 // **=== Overridden Public Methods ===**
 

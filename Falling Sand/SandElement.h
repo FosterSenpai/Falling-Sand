@@ -28,7 +28,7 @@ public:
     // **=== Constructors / Destructor ===**
 
     /** @brief Default constructor. */
-    SandElement() = default;
+    SandElement();
     /** @brief Default virtual destructor. */
     virtual ~SandElement() = default;
 

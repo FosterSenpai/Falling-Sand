@@ -28,7 +28,7 @@ public:
     // **=== Constructors / Destructor ===**
 
     /** @brief Default constructor. */
-    WaterElement() = default;
+    WaterElement();
     /** @brief Default virtual destructor. */
     virtual ~WaterElement() = default;
 

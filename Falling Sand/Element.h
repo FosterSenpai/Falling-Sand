@@ -15,6 +15,8 @@
 
 #include <SFML/Graphics.hpp>
 #include "Particle.h"
+#include <cstdlib>
+#include <algorithm>
 
 class World;
 
@@ -55,6 +57,14 @@ public:
      * @return ParticleType The enum value representing the specific kind of element.
      */
     virtual ParticleType getType() const = 0;
+
+    /**
+     * @brief Gets the unique, potentially varied color for rendering this specific particle.
+     * @return sf::Color The color stored in m_variedColor.
+     */
+    sf::Color getRenderColor() const {
+        return m_variedColor;
+    }
 
 
     // **=== Common Physics & State Methods ===**
@@ -157,4 +167,35 @@ protected:
      * Reset at the start of each tick, set to true when update is complete for this element.
      */
     bool updatedThisTick = false;
+
+    /**
+	 * @brief Unique color for rendering this specific particle.
+     */
+    sf::Color m_variedColor;
+
+    // **=== Protected Helper Methods ===**
+
+    /**
+     * @brief Calculates a random variation based on a base color and stores it.
+     * Should be called by derived class constructors.
+     * @param baseColor The base color for the element type.
+     */
+    void initializeColorVariation(sf::Color baseColor) {
+        // --- Adjust the variation range as desired ---
+        int variation = 15; // Max +/- change for R, G, B
+        int r_offset = (rand() % (variation * 2 + 1)) - variation; // -variation to +variation
+        int g_offset = (rand() % (variation * 2 + 1)) - variation;
+        int b_offset = (rand() % (variation * 2 + 1)) - variation;
+
+        // Clamp values between 0 and 255
+        int r = std::min(255, std::max(0, static_cast<int>(baseColor.r) + r_offset));
+        int g = std::min(255, std::max(0, static_cast<int>(baseColor.g) + g_offset));
+        int b = std::min(255, std::max(0, static_cast<int>(baseColor.b) + b_offset));
+
+        m_variedColor = sf::Color(  
+           static_cast<std::uint8_t>(r),  
+           static_cast<std::uint8_t>(g),  
+           static_cast<std::uint8_t>(b)
+        );
+    }
 };
