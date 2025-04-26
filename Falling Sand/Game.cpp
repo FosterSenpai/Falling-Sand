@@ -246,23 +246,41 @@ void Game::updateUIText() {
 void Game::prepareVertices() {
     m_gridVertices.clear();
     const auto& currentGrid = m_world.getGridState();
+    const sf::Color baseWaterColor(60, 120, 180); // Define base water color once
+    const sf::Color deepWaterColor(20, 40, 80);  // Define the darkest color for the bottom
 
     for (int r = 0; r < m_gridRows; ++r) {
         for (int c = 0; c < m_gridCols; ++c) {
             const std::unique_ptr<Element>& elementPtr = currentGrid[r][c];
             if (elementPtr) {
                 Element* element = elementPtr.get();
+                sf::Color particleColor;
 
-                // *** CHANGE HERE ***
-                // Get the specific varied color for this particle instance
-                sf::Color particleColor = element->getRenderColor(); // Use the new getter
+                // --- Check if it's water ---
+                if (element->getType() == ParticleType::WATER) {
+                    // --- Apply Vertical Gradient ---
+                    // Calculate depth factor (0.0 at top, 1.0 at bottom)
+                    float depthFactor = static_cast<float>(r) / static_cast<float>(m_gridRows - 1);
+                    depthFactor = std::min(1.0f, depthFactor); // Clamp factor just in case
 
+                    // Interpolate between base and deep colors
+                    uint8_t red = static_cast<uint8_t>(baseWaterColor.r + (deepWaterColor.r - baseWaterColor.r) * depthFactor);
+                    uint8_t green = static_cast<uint8_t>(baseWaterColor.g + (deepWaterColor.g - baseWaterColor.g) * depthFactor);
+                    uint8_t blue = static_cast<uint8_t>(baseWaterColor.b + (deepWaterColor.b - baseWaterColor.b) * depthFactor);
+                    particleColor = sf::Color(red, green, blue);
+                }
+                else {
+                    // For other elements, use their stored render color
+                    particleColor = element->getRenderColor(); // Use existing color for non-water
+                }
+
+
+                // --- Create vertices ---
                 float left = static_cast<float>(c) * m_cellWidth;
                 float top = static_cast<float>(r) * m_cellWidth;
                 float right = left + m_cellWidth;
                 float bottom = top + m_cellWidth;
 
-                // Create vertices with the varied color
                 sf::Vertex topLeft(sf::Vector2f(left, top), particleColor);
                 sf::Vertex topRight(sf::Vector2f(right, top), particleColor);
                 sf::Vertex bottomLeft(sf::Vector2f(left, bottom), particleColor);
