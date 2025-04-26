@@ -182,7 +182,7 @@ protected:
      */
     void initializeColorVariation(sf::Color baseColor) {
         // --- Adjust the variation range as desired ---
-        int variation = 15; // Max +/- change for R, G, B
+        int variation = 5; // Max +/- change for R, G, B
         int r_offset = (rand() % (variation * 2 + 1)) - variation; // -variation to +variation
         int g_offset = (rand() % (variation * 2 + 1)) - variation;
         int b_offset = (rand() % (variation * 2 + 1)) - variation;

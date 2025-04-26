@@ -47,7 +47,7 @@ void WaterElement::update(World& world, int r, int c) {
 
     // --- Update Mark ---
     if (!acted && !attemptEvaporation(world, r, c)) {
-        this->potentiallyGoToSleep();
+        //this->potentiallyGoToSleep();
     }
     if (!attemptEvaporation(world, r, c)) {
         this->markAsUpdated();
@@ -71,7 +71,7 @@ float WaterElement::getDensity() const {
 }
 
 int WaterElement::getDispersionRate() const {
-    return 6; // Still using the original dispersion rate
+    return 10; // Still using the original dispersion rate
 }
 
 float WaterElement::getBoilingPoint() const {

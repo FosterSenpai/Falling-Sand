@@ -25,9 +25,9 @@
 Game::Game() :
 
     // --- Initialize constants and calculate derived values ---
-    m_windowWidth(1280),
-    m_windowHeight(720),
-    m_cellWidth(4.0f),
+    m_windowWidth(1600),
+    m_windowHeight(900),
+    m_cellWidth(5.0f),
     m_gridCols(static_cast<int>(m_windowWidth / m_cellWidth)),
     m_gridRows(static_cast<int>(m_windowHeight / m_cellWidth)),
 
@@ -77,17 +77,29 @@ void Game::setupInitialState() {
     // Set initial brush settings
     m_brushSize = 5;
     m_brushType = ParticleType::SAND;
-
-    // Initialize the vertex array for rendering the grid
     m_gridVertices.setPrimitiveType(sf::PrimitiveType::Triangles);
 
-    // Create the SFML window
-    auto windowStyle = sf::Style::Titlebar | sf::Style::Close;
+    // Set the window style
+    auto windowStyle = sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize;
+
+    // Create the SFML window (using dimensions set in constructor)
     m_window.create(sf::VideoMode({ m_windowWidth, m_windowHeight }), "Falling Sand OOP", windowStyle);
-    m_window.setFramerateLimit(60); // Limit FPS
+
+    // Get desktop dimensions
+    sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+
+    // Calculate the center position
+    int centeredX = (desktop.size.x / 2) - (m_windowWidth / 2);
+    int centeredY = ((desktop.size.y / 2) - 50) - (m_windowHeight / 2);
+
+    // Set the window position
+    m_window.setPosition(sf::Vector2i(centeredX, centeredY));
+
+    // Set framerate limit
+    m_window.setFramerateLimit(60);
 
     // Set initial UI text
-	updateUIText(); // Make sure to call this after loading resources for font
+    updateUIText();
 }
 
 // **=== Main Public Methods ===**
