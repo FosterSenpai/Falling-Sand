@@ -77,10 +77,16 @@ void World::setElementByType(int r, int c, ParticleType type) {
 
 void World::update() {
     // --- Step 0: Process Placement Requests ---
+    // Process any pending element placements requested since last update
     for (const auto& request : m_placementRequests) {
-        setElementByType(request.r, request.c, request.type);
+        // Ensure setElementByType handles potential out-of-bounds internally or check here
+        if (isWithinBounds(request.r, request.c)) {
+            setElementByType(request.r, request.c, request.type); // Place the element
+            wakeNeighbors(request.r, request.c); // Wake up neighbors around the new particle
+        }
     }
-    m_placementRequests.clear();
+    m_placementRequests.clear(); // Clear requests after processing
+
 
     // --- Step 1: Prepare for the new tick ---
 	// Calculate surface heights for the current grid
@@ -102,7 +108,7 @@ void World::update() {
             // Sweep Left-to-Right
             for (int c = 0; c < m_cols; ++c) {
                 Element* element = m_grid[r][c].get();
-                if (element && !element->isUpdatedThisTick()) {
+                if (element && !element->isUpdatedThisTick() && element->isAwake()) {
                     element->update(*this, r, c);
                 }
             }
@@ -111,7 +117,7 @@ void World::update() {
             // Sweep Right-to-Left
             for (int c = m_cols - 1; c >= 0; --c) {
                 Element* element = m_grid[r][c].get();
-                if (element && !element->isUpdatedThisTick()) {
+                if (element && !element->isUpdatedThisTick() && element->isAwake()) {
                     element->update(*this, r, c);
                 }
             }
