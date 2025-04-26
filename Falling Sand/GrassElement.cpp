@@ -4,27 +4,24 @@
 // Author:      Foster Rae
 // Date Created:2025-04-26
 // Last Update: 2025-04-26
-// Version:     1.0
+// Version:     1.1 // Updated version
 // Description: Implementation file for the GrassElement class.
 // ============================================================================
 
 #include "GrassElement.h"
-#include "World.h"          // Needed for update parameters & neighbour checks
-#include "Particle.h"       // For ParticleType enum
-#include <SFML/Graphics.hpp> // For sf::Color
-#include <cstdlib>           // For rand()
-#include <memory>            // For std::move in setNextElement
-
-// We will need DirtElement later for the transformation
-// #include "DirtElement.h" // Not strictly needed if just using factory
+#include "World.h"
+#include "Particle.h"
+#include <SFML/Graphics.hpp>
+#include <cstdlib>
+#include <memory>
+#include <iostream>
+#include "DirtElement.h"
 
 // **=== Overridden Public Methods ===**
 
 void GrassElement::update(World& world, int r, int c) {
-    // Increment base age
-    age++;
-
-    bool becameDirt = false; // Flag
+    age++; // Increment age
+    bool becameDirt = false;
 
     // --- Grass Death Logic ---
     // 1. Check cell directly above
@@ -34,29 +31,24 @@ void GrassElement::update(World& world, int r, int c) {
     if (elementAbove) {
         // 2. Check random chance to die
         if ((rand() % 100) < GRASS_DEATH_CHANCE_PERCENT) {
-            // Conditions met! Transform into Dirt for the NEXT tick.
+			// Grass dies and turns into dirt
             std::unique_ptr<Element> newDirt = world.createElementByType(ParticleType::DIRT);
             if (newDirt) {
                 world.setNextElement(r, c, std::move(newDirt));
                 becameDirt = true; // Mark transformation
             }
         }
-        // Optional: Add a timer (like time_covered) if death shouldn't be instant chance.
     }
-    // Else: Nothing above, grass survives.
 
-    // --- End Grass Death Logic ---
-
-
-    // --- Static Element Sleep Logic ---
+    // --- Update Mark ---
+    // Grass is currently set to always be "awake" (no potentiallyGoToSleep)
+    // Mark as updated if it wasn't replaced by Dirt
     if (!becameDirt) {
         this->markAsUpdated();
     }
-    // If it became Dirt, the new dirt element handles its own flags next tick.
 }
 
 sf::Color GrassElement::getColor() const {
-    // Grass color (e.g., from Utils.cpp)
     return sf::Color(40, 140, 40);
 }
 
@@ -64,8 +56,33 @@ ParticleType GrassElement::getType() const {
     return ParticleType::GRASS;
 }
 
-// --- Physical Property Implementations (Example Values) ---
-
 float GrassElement::getDensity() const {
-    return 1.1f; // Lighter than dirt/sand?
+    return 1.1f;
+}
+
+// **=== Concrete Property Implementations ===**
+
+float GrassElement::getHardness() const {
+    return 0.1f; // Very soft
+}
+
+float GrassElement::getThermalConductivity() const {
+    return 0.15f; // Similar to dirt? Low.
+}
+
+float GrassElement::getMeltingPoint() const {
+    // Grass burns/decomposes. Use a relatively low temp compared to rock/sand.
+    return 400.0f; // Example decomposition/ignition temperature?
+}
+
+ParticleType GrassElement::getLiquidForm() const {
+    // Doesn't melt into a liquid. Maybe turns to Ash?
+    // TODO: Add ASH type later?
+    return ParticleType::EMPTY; // Placeholder
+}
+
+ParticleType GrassElement::getGasForm() const {
+    // Burns into maybe smoke/carbon? Needs reaction system.
+    // TODO: Add SMOKE type later?
+    return ParticleType::EMPTY; // Placeholder
 }
