@@ -17,33 +17,56 @@
 #include <iostream>
 #include "DirtElement.h"
 
+// **=== Constructor ===**
+GrassElement::GrassElement() : m_timeSinceCovered(0) {}
+
 // **=== Overridden Public Methods ===**
 
 void GrassElement::update(World& world, int r, int c) {
-    age++; // Increment age
+    age++;
     bool becameDirt = false;
 
     // --- Grass Death Logic ---
-    // 1. Check cell directly above
-    Element* elementAbove = world.getElement(r - 1, c); // Check current grid state
+    Element* elementAbove = world.getElement(r - 1, c);
 
-    // If there IS something above (not null/empty)
-    if (elementAbove) {
-        // 2. Check random chance to die
-        if ((rand() % 100) < GRASS_DEATH_CHANCE_PERCENT) {
-			// Grass dies and turns into dirt
-            std::unique_ptr<Element> newDirt = world.createElementByType(ParticleType::DIRT);
-            if (newDirt) {
-                world.setNextElement(r, c, std::move(newDirt));
-                becameDirt = true; // Mark transformation
-            }
-        }
+	// If dirt above die instantly
+    if (elementAbove && elementAbove->getType() == ParticleType::DIRT) {
+		// Grass dies and turns into dirt
+		std::unique_ptr<Element> newDirt = world.createElementByType(ParticleType::DIRT);
+		if (newDirt) {
+			world.setNextElement(r, c, std::move(newDirt));
+			becameDirt = true;
+		}
     }
 
+    if (elementAbove) {
+        // Increment timer only when covered by a problematic element
+        m_timeSinceCovered++;
+
+        // Check if covered for long enough
+        if (m_timeSinceCovered > GRASS_DEATH_TIME_THRESHOLD) {
+            // Now check random chance to die
+            if ((rand() % 100) < GRASS_DEATH_CHANCE_PERCENT) {
+                // Grass dies and turns into dirt
+                std::unique_ptr<Element> newDirt = world.createElementByType(ParticleType::DIRT);
+                if (newDirt) {
+                    world.setNextElement(r, c, std::move(newDirt));
+                    becameDirt = true;
+                }
+            }
+        }
+        // If covered but timer not met, do nothing this tick regarding death.
+
+    }
+    else {
+        // Reset timer if uncovered OR covered by grass
+        m_timeSinceCovered = 0;
+    }
+
+
     // --- Update Mark ---
-    // Grass is currently set to always be "awake" (no potentiallyGoToSleep)
-    // Mark as updated if it wasn't replaced by Dirt
     if (!becameDirt) {
+        this->wakeUp();
         this->markAsUpdated();
     }
 }

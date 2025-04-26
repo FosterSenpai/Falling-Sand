@@ -28,7 +28,7 @@ public:
     // **=== Constructors / Destructor ===**
 
     /** @brief Default constructor. */
-    GrassElement() = default;
+    GrassElement();
     /** @brief Default virtual destructor. */
     virtual ~GrassElement() = default;
 
@@ -100,4 +100,14 @@ private:
      */
     static constexpr int GRASS_DEATH_CHANCE_PERCENT = 2;
 
+    /**
+     * @brief Minimum time (in ticks) grass must be covered by non-grass/non-air before potentially dying.
+     */
+    static constexpr int GRASS_DEATH_TIME_THRESHOLD = 150; // Added: Adjust as needed (e.g., 100 ticks = ~1.6s at 60fps)
+
+    /**
+     * @brief Tracks how long (in ticks) this grass particle has been covered
+     * by a non-grass/non-air element continuously. Resets if uncovered or covered by grass.
+     */
+    int m_timeSinceCovered; // Added
 };

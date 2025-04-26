@@ -108,11 +108,11 @@ private:
     /**
      * @brief Minimum time (in ticks) required exposure to air before grass can potentially grow.
      */
-    static constexpr int GRASS_GROW_TIME_THRESHOLD = 50;
+    static constexpr int GRASS_GROW_TIME_THRESHOLD = 150;
 
     /**
      * @brief Chance (out of 100) per tick to grow grass once threshold and depth checks pass.
      */
-    static constexpr int GRASS_GROW_CHANCE_PERCENT = 60;
+    static constexpr int GRASS_GROW_CHANCE_PERCENT = 2;
 
 };
