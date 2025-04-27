@@ -250,6 +250,7 @@ bool World::tryMoveOrSwap(int r_from, int c_from, int r_to, int c_to) {
     }
 }
 
+
 // --- Other World Member Functions ---
 
 void World::setNextElement(int r, int c, std::unique_ptr<Element> element) {

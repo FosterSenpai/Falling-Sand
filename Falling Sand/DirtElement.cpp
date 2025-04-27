@@ -3,8 +3,8 @@
 // File:        DirtElement.cpp
 // Author:      Foster Rae
 // Date Created:2025-04-26
-// Last Update: 2025-04-26
-// Version:     1.2
+// Last Update: 2025-04-27
+// Version:     1.3
 // Description: Implementation file for the DirtElement class.
 //              Turns into grass if exposed within a random depth from the surface.
 // ============================================================================
@@ -40,27 +40,16 @@ void DirtElement::update(World& world, int r, int c) {
 
         if (m_timeSinceExposed > GRASS_GROW_TIME_THRESHOLD) {
             if ((rand() % 100) < GRASS_GROW_CHANCE_PERCENT) {
-
-                // --- REMOVE DEPTH CHECK ---
-                // int surfaceHeight = world.getSurfaceHeight(c); // No longer needed
-                // int surfaceDistance = (surfaceHeight < world.getRows()) ? (r - surfaceHeight + 1) : 0; // No longer needed
-                // int randomMaxGrowthDepth = 2 + (rand() % 4); // No longer needed
-
-                // The 'if' condition below is removed, growth happens if time/chance pass
-                // if (surfaceDistance > 0 && surfaceDistance <= randomMaxGrowthDepth) { // REMOVED CONDITION
-
-                    // (Also remove the inner redundant growConditionMet check if you haven't already)
+				// Create the grass element
                 std::unique_ptr<Element> newGrass = world.createElementByType(ParticleType::GRASS);
                 if (newGrass) {
                     world.setNextElement(r, c, std::move(newGrass));
                     becameGrass = true;
                 }
 
-                // } // REMOVED corresponding '}'
-
             }
-            // Reset timer slightly randomly (keep this if you like the behaviour)
-            if (!becameGrass && (rand() % 5 == 0)) { // Added !becameGrass check
+            // Reset timer slightly randomly
+            if (!becameGrass && (rand() % 5 == 0)) {
                 m_timeSinceExposed = GRASS_GROW_TIME_THRESHOLD - (rand() % 10);
             }
         }
@@ -76,12 +65,10 @@ void DirtElement::update(World& world, int r, int c) {
             // this->potentiallyGoToSleep();
         }
         else {
-            // Keep waking up if exposed, as it might be counting time
             this->wakeUp();
         }
         this->markAsUpdated();
     }
-    // If it became grass, the new GrassElement will handle its own update mark
 }
 sf::Color DirtElement::getColor() const {
     return sf::Color(133, 94, 66);

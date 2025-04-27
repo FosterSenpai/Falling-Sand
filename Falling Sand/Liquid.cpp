@@ -21,15 +21,6 @@
 
 // **=== Protected Helper Methods ===**
 
-/**
- * @brief Attempts to perform standard liquid flow logic (down, diagonal, horizontal).
- * 
- * Should be called by the derived class's update() method.
- * @param world Reference to the world grid and its methods.
- * @param r Current row.
- * @param c Current column.
- * @return true if the liquid successfully moved or swapped, false otherwise.
- */
 bool Liquid::attemptFlow(World& world, int r, int c) {
 
     // --- Priority 1: Try Move/Swap Directly Below ---
@@ -125,17 +116,6 @@ bool Liquid::attemptFlow(World& world, int r, int c) {
     return false;
 }
 
-/**
- * @brief Attempts to evaporate the liquid based on temperature and conditions.
- * Checks temperature against boiling point, checks space above, and potentially
- * replaces this liquid element with its gas form via the World object's nextGrid.
- * 
- * Should be called by the derived class's update() method.
- * @param world Reference to the world grid and its methods.
- * @param r Current row.
- * @param c Current column.
- * @return true if evaporation occurred and element was replaced, false otherwise.
- */
 bool Liquid::attemptEvaporation(World& world, int r, int c) {
     // 1. Check temperature
     if (this->getTemperature() < this->getBoilingPoint()) {

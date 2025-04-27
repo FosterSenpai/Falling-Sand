@@ -71,7 +71,7 @@ float WaterElement::getDensity() const {
 }
 
 int WaterElement::getDispersionRate() const {
-    return 10; // Still using the original dispersion rate
+    return 7;
 }
 
 float WaterElement::getBoilingPoint() const {
