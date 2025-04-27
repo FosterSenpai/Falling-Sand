@@ -32,6 +32,7 @@ void DirtElement::update(World& world, int r, int c) {
     bool becameGrass = false;
 
     Element* elementAbove = world.getElement(r - 1, c);
+    // Allow growth if air OR grass is directly above
     bool isEffectivelyExposed = !elementAbove || (elementAbove && elementAbove->getType() == ParticleType::GRASS);
 
     if (isEffectivelyExposed) {
@@ -40,58 +41,48 @@ void DirtElement::update(World& world, int r, int c) {
         if (m_timeSinceExposed > GRASS_GROW_TIME_THRESHOLD) {
             if ((rand() % 100) < GRASS_GROW_CHANCE_PERCENT) {
 
-				int surfaceHeight = world.getSurfaceHeight(c); // Get surface height for this column
+                // --- REMOVE DEPTH CHECK ---
+                // int surfaceHeight = world.getSurfaceHeight(c); // No longer needed
+                // int surfaceDistance = (surfaceHeight < world.getRows()) ? (r - surfaceHeight + 1) : 0; // No longer needed
+                // int randomMaxGrowthDepth = 2 + (rand() % 4); // No longer needed
 
-                // Calculate distance/depth of this block from the surface
-                int surfaceDistance = (surfaceHeight < world.getRows()) ? (r - surfaceHeight + 1) : 0;
+                // The 'if' condition below is removed, growth happens if time/chance pass
+                // if (surfaceDistance > 0 && surfaceDistance <= randomMaxGrowthDepth) { // REMOVED CONDITION
 
-                // Determine the random maximum growth depth (1-5 layers)
-                int randomMaxGrowthDepth = 1 + (rand() % 5);
-
-                // Check if this dirt block is within the allowed random depth
-                if (surfaceDistance > 0 && surfaceDistance <= randomMaxGrowthDepth) {
-
-                    // only grow if directly below air or grass
-                    bool growConditionMet = false;
-                    if (!elementAbove) { // Exposed to air
-                        growConditionMet = true;
-                    }
-                    else if (elementAbove->getType() == ParticleType::GRASS) { // Below grass
-                        growConditionMet = true;
-                    }
-
-					// If the growth condition is met, transform to GrassElement
-                    if (growConditionMet) {
-                        std::unique_ptr<Element> newGrass = world.createElementByType(ParticleType::GRASS);
-                        if (newGrass) {
-                            world.setNextElement(r, c, std::move(newGrass));
-                            becameGrass = true;
-                        }
-                    }
+                    // (Also remove the inner redundant growConditionMet check if you haven't already)
+                std::unique_ptr<Element> newGrass = world.createElementByType(ParticleType::GRASS);
+                if (newGrass) {
+                    world.setNextElement(r, c, std::move(newGrass));
+                    becameGrass = true;
                 }
+
+                // } // REMOVED corresponding '}'
+
             }
-            // Reset timer slightly randomly
-            if (rand() % 5 == 0) {
+            // Reset timer slightly randomly (keep this if you like the behaviour)
+            if (!becameGrass && (rand() % 5 == 0)) { // Added !becameGrass check
                 m_timeSinceExposed = GRASS_GROW_TIME_THRESHOLD - (rand() % 10);
             }
         }
     }
     else {
-        m_timeSinceExposed = 0;
+        m_timeSinceExposed = 0; // Reset timer if covered
     }
 
     // --- Static Element Sleep & Update Mark ---
     if (!becameGrass) {
         if (!isEffectivelyExposed) {
-            //this->potentiallyGoToSleep();
+            // Consider uncommenting sleep for performance on buried dirt
+            // this->potentiallyGoToSleep();
         }
         else {
+            // Keep waking up if exposed, as it might be counting time
             this->wakeUp();
         }
         this->markAsUpdated();
     }
+    // If it became grass, the new GrassElement will handle its own update mark
 }
-
 sf::Color DirtElement::getColor() const {
     return sf::Color(133, 94, 66);
 }
